@@ -85,10 +85,81 @@ Host targeting still requires `--limit server` or `--limit workstation`: tags al
 are not a reliable host boundary. Currently `--tags server` also selects the entire
 all-host core play, and `site.yml --tags hermes` does not select the Hermes role.
 
-Put host identity, chosen memberships, paths, and reachable ports in inventory or
-group variables. Keep defaults for commonly changed selections, versions, and
-service settings. Fixed package names, installer endpoints, and derived paths
-usually do not need their own override variables.
+Put connection details in inventory, profile choices in group variables, and
+machine-specific differences in host variables. Keep defaults for commonly
+changed selections and service settings. Fixed package names, installer endpoints,
+and derived paths usually do not need their own override variables.
+
+## Recommended configuration locations
+
+Keep deployment code and an application's configuration together. A separate
+top-level dotfiles directory would make moving a group easier, but would also
+split every role across two places. The existing role-local `files/` and
+`templates/` layout is already a useful boundary.
+
+```text
+inventory.yaml                       # Hosts, connection details, group membership
+group_vars/
+  workstation.yml                    # Workstation app choices and shared preferences
+  server.yml                         # Server paths, timezone, service settings
+host_vars/
+  xs-ea.yml                          # Only differences specific to this machine
+  gmk-de.yml                         # Sync device IDs, host-specific endpoints/paths
+playbooks/
+  site.yml                           # Explicit role selection for each profile
+  control.yml                        # Container lifecycle commands
+dot_roles/
+  apps-browser/
+    defaults/main.yml                # Small set of app-selection defaults
+    tasks/main.yml                   # Browser installation/configuration
+  tools-dev/
+    files/.config/mise/config.toml    # Canonical personal development tool versions
+    tasks/main.yml                   # Install mise and deploy its configuration
+  neovim/files/.config/nvim/          # Preserve the existing native editor config
+server_roles/
+  hermes/
+    defaults/main.yml                # Image, port, and commonly changed options
+    templates/docker-compose.yml.j2  # Compose definition
+docs/
+  role-redesign-plan.md               # Review and proposed migration
+server.md                            # Server scope and manual enrollment runbook
+CONTEXT.md                           # Shared vocabulary
+```
+
+Create group/host variable files only when there is a real value to put in them.
+Avoid `group_vars/all.yml` initially: shared requirements can be explicit in the
+profile plays, without reintroducing a large implicit baseline.
+
+| Setting | Recommended owner |
+| --- | --- |
+| Whether a capability runs on server or workstation | The corresponding play's role list |
+| Browser or communication app choices | Profile group variables, with small role defaults |
+| Git identity | Workstation group variables; a server override only if wanted |
+| Personal Neovim, tmux, zsh, and AI client configuration | Native files in the role that owns that application |
+| Development runtime and CLI versions | Native mise TOML in `tools-dev/files/`; no second version list in YAML |
+| A project's dependencies and tool versions | That project's manifests and mise config |
+| Server timezone, app root, backup source/repository | Server group variables, overridden per host only when different |
+| Syncthing peers and machine-specific addresses | Host variables |
+| App image, bind address, externally reachable port | App role defaults with profile/host overrides |
+| Fixed distribution package names | Role tasks or OS-specific role vars |
+| Account tokens and backup passwords | Existing target credential files or explicit secret inputs, outside tracked config |
+
+Prefer ordinary lists and native files to large nested configuration objects.
+For example, keep `browser_apps` and `communication_apps` as separate lists;
+avoid one global `apps` object containing installation, configuration, versions,
+and service controls for every application. Namespace variables by their owner.
+
+Copy native configuration directly when it contains no machine-specific values.
+Use templates only for actual variation, such as Git identity, a server path, or
+a port. Keep Neovim Lua and application JSON in their native formats rather than
+translating their settings into Ansible variables.
+
+For server storage, keep one profile-level app root and derive
+`{{ <role>_app_dir }}/apps/<app>` from it. `_control` must use the same root.
+Keep synchronized `~/core` and backup credentials outside the container tree;
+container state and shared caches remain separate so backup sources can be chosen
+deliberately. The first implementation retains existing paths until data movement
+is planned.
 
 ## Opportunities to lighten configuration
 
@@ -114,10 +185,14 @@ usually do not need their own override variables.
 
 ## Mise plan
 
-Ansible installs mise for the target normal user, renders selected development
-tools into `~/.config/mise/config.toml`, and runs installation as that user.
+Ansible installs mise for the target normal user, deploys the role's native tool
+config to `~/.config/mise/config.toml`, and runs installation as that user.
 Interactive shells activate mise; Ansible tasks use its absolute executable and
 `mise exec` where needed so SSH tasks do not depend on shell startup files.
+
+Start with one workstation development config. Introduce separate configs or a
+template only when machines actually need different tools; do not duplicate its
+tool versions in role defaults or inventory.
 
 Move Node, Deno, Yarn, and supported development CLIs first. Add Go or a development
 Python only when selected. Preserve `/usr/bin/python3` for Ansible and system tooling.
