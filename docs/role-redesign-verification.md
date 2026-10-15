@@ -1,49 +1,37 @@
 # Role redesign verification
 
 Implementation checks use the existing Python 3.13 Ansible environment.
-The fixture suite is `tests/verify_roles.py`; run with a controller Python that
-has PyYAML, installed Ansible collections, Syncthing, Zsh and Restic:
+
+Run the test suite with a controller Python that has Ansible and the required
+collections installed:
 
 ```sh
-ANSIBLE_PLAYBOOK=ansible-playbook RESTIC_BINARY="$(command -v restic)" \
-  python tests/verify_roles.py
+python -m unittest discover tests/
 ```
 
-Fixtures use temporary directories and localhost-only Syncthing endpoints.
-OS package tasks are skipped; Podman is mocked. No real machine profile is applied.
-Ansible needs local Unix sockets, and Syncthing needs loopback sockets.
+Tests currently cover:
 
-Syntax checks for `site.yml` and `control.yml` and Ansible lint passed using the
-existing compatible Python 3.13 controller environment.
+- `tests/test_syntax.py`: `--syntax-check` for `playbooks/site.yml` and
+  `playbooks/control.yml`.
+- `tests/test_isolation.py`: `--list-tasks` assertions that `--tags git`,
+  `--tags browser`, and `--tags hermes` only touch the expected roles.
 
-The 16 acceptance tests passed. They cover:
+A catalog test will be added once the per-app installer is implemented.
 
-- Client/server isolation and standalone tool prerequisites in task listings;
-  Restic/rclone and both backup jobs belong only to the server profile.
-- Git existing identity, explicit precedence, preserved unrelated settings,
-  repeat runs and clear unattended failure; unrelated tags omit Git prompts.
-- SSH disabled by default, existing private-key preservation, hidden missing-secret
-  handling and explicit empty-passphrase generation in a temporary directory.
-- Missing external mounts failing before creation, and explicit directory creation.
-- Two temporary Syncthing endpoints: initial enrollment, mutual peer declarations,
-  per-endpoint paths and modes, repeat runs, preserved unmanaged folders/peers/shares.
-  Missing and duplicate IDs fail before installation.
-- Separate local Restic repository initialization, backups and independent restores
-  using different passwords, cache exclusion, and independent timer schedules.
-- Mocked Hermes prior-state restoration on success, backup failure, SIGTERM and
-  SIGKILL recovery; a previously stopped app stays stopped.
-- Existing repository redirection refusal, enabled legacy-job preservation and
-  restore-verification enrollment gates.
-- Individual mise selections, runtime prerequisites, preserved native config,
-  `latest` versions without repeated installation when current, rendered TOML,
-  shell syntax and local documentation links.
+## Previous verification report (historical)
 
-No skipped tests. Syncthing fixtures verify configuration, not real-device
-connectivity or synchronization completion. Podman is mocked; Restic operations
-use real temporary local repositories. Writing-for-agents and domain-modeling
-guidance informed the short repository rules and base/client terminology.
+The old `tests/verify_roles.py` suite has been removed. Its claimed 16
+acceptance tests are no longer in the repository and should not be treated as
+current evidence.
 
-Live checks deliberately excluded: Proton Pass authentication, Google Drive
-authorization and remote repository restore, real-device connectivity/synchronization,
-real Podman/Hermes deployment and systemd timer execution. Neither machine's
-configuration has been applied.
+## Live checks
+
+The following still require explicit live verification on real targets:
+
+- Proton Pass authentication and controller-side secret injection.
+- Google Drive authorization and remote Restic repository restore.
+- Real-device Syncthing connectivity and synchronization completion.
+- Real Podman/Hermes deployment and systemd timer execution.
+
+Neither machine's configuration has been applied by the test suite. Fixture
+success does not imply live success.

@@ -3,3 +3,4 @@ homelab/
 .venv/
 .ansible/
 .commandcode/
+__pycache__/

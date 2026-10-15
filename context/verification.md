@@ -10,16 +10,19 @@ unless requested.
 After Ansible changes, run with a compatible controller environment:
 
 ```sh
+python -m unittest discover tests/
 ANSIBLE_LOCAL_TEMP=/tmp/ansible-local TMPDIR=/tmp ansible-playbook --syntax-check playbooks/site.yml
 ANSIBLE_LOCAL_TEMP=/tmp/ansible-local TMPDIR=/tmp ansible-playbook --syntax-check playbooks/control.yml
 ansible-lint playbooks/site.yml playbooks/control.yml
 ```
 
-[Acceptance fixtures](../tests/verify_roles.py) cover profile/tool isolation,
-Git/SSH behavior, mount guards, temporary Syncthing pairing, independent local
-Restic restores, repository/enrollment guards and mocked Hermes recovery.
-They skip OS package installation and use temporary directories.
-Ansible needs local Unix sockets; Syncthing fixtures need loopback sockets.
+The `tests/` suite currently covers:
+
+- `test_syntax.py`: `--syntax-check` for `site.yml` and `control.yml`.
+- `test_isolation.py`: `--list-tasks` assertions that `--tags git`,
+  `--tags browser`, and `--tags hermes` only touch the expected roles.
+
+A catalog test will be added once the per-app installer is implemented.
 
 Run checks relevant to the change. Validate native shell/TOML configuration and
 local documentation/role references when relocating files.

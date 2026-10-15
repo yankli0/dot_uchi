@@ -76,6 +76,16 @@ ansible-playbook playbooks/control.yml -e control_action=up -e control_app=herme
 ## Local validation
 
 ```sh
+python -m unittest discover tests/
+```
+
+Tests assume a compatible Ansible controller environment (Python 3.13, Ansible
+collections installed). They run `--syntax-check` on `site.yml` and `control.yml`
+and verify that tags only pull in the expected roles.
+
+Additional manual checks:
+
+```sh
 ANSIBLE_LOCAL_TEMP=/tmp/ansible-local TMPDIR=/tmp ansible-playbook --syntax-check playbooks/site.yml
 ANSIBLE_LOCAL_TEMP=/tmp/ansible-local TMPDIR=/tmp ansible-playbook --syntax-check playbooks/control.yml
 ansible-lint playbooks/site.yml playbooks/control.yml
