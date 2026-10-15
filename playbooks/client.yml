@@ -9,18 +9,30 @@
   hosts: client
   tags: [client]
   tasks:
-    - name: Install browsers
-      ansible.builtin.import_tasks: tasks/client/browser.yml
-      tags: [apps, browser, flatpak]
+    - name: Install selected client apps
+      ansible.builtin.import_role:
+        name: client/apps
+      tags: [apps, flatpak]
+    - name: Install browser apps
+      ansible.builtin.import_role:
+        name: client/apps
+        tasks_from: browser.yml
+      tags: [browser, never]
     - name: Install communication apps
-      ansible.builtin.import_tasks: tasks/client/communication.yml
-      tags: [apps, communication, flatpak]
+      ansible.builtin.import_role:
+        name: client/apps
+        tasks_from: communication.yml
+      tags: [communication, never]
     - name: Install notes apps
-      ansible.builtin.import_tasks: tasks/client/notes.yml
-      tags: [apps, notes, flatpak]
-    - name: Install modeling apps
-      ansible.builtin.import_tasks: tasks/client/3d-modeling.yml
-      tags: [apps, 3d-modeling, flatpak]
+      ansible.builtin.import_role:
+        name: client/apps
+        tasks_from: notes.yml
+      tags: [notes, never]
+    - name: Install 3D modeling apps
+      ansible.builtin.import_role:
+        name: client/apps
+        tasks_from: 3d-modeling.yml
+      tags: [3d-modeling, never]
     - name: Configure Neovim
       ansible.builtin.import_role:
         name: ../roles/client/neovim

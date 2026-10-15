@@ -15,8 +15,9 @@ Tests currently cover:
   `playbooks/control.yml`.
 - `tests/test_isolation.py`: `--list-tasks` assertions that `--tags git`,
   `--tags browser`, and `--tags hermes` only touch the expected roles.
-
-A catalog test will be added once the per-app installer is implemented.
+- `tests/test_catalog.py`: validates the app catalog in
+  `roles/client/apps/vars/catalog.yml` and that `inventory/group_vars/client.yml`
+  selects only known app ids.
 
 ## Previous verification report (historical)
 

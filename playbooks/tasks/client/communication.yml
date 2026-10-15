@@ -1,6 +1,0 @@
----
-- name: Install communication apps
-  ansible.builtin.import_role:
-    name: ../roles/client/flatpak
-  vars:
-    flatpak_packages: "{{ communication_apps }}"

@@ -1,0 +1,5 @@
+---
+- name: Install 3D modeling apps
+  ansible.builtin.include_tasks: install.yml
+  vars:
+    client_apps: "{{ app_catalog | dict2items | selectattr('value.group','equalto','3d-modeling') | map(attribute='key') | list }}"

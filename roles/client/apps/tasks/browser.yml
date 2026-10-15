@@ -1,0 +1,5 @@
+---
+- name: Install browser apps
+  ansible.builtin.include_tasks: install.yml
+  vars:
+    client_apps: "{{ app_catalog | dict2items | selectattr('value.group','equalto','browser') | map(attribute='key') | list }}"

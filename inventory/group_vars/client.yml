@@ -1,5 +1,2 @@
 ---
-browser_apps: [com.google.Chrome, app.zen_browser.zen]
-communication_apps: [com.discordapp.Discord, com.slack.Slack]
-notes_apps: []
-modeling_apps: []
+client_apps: [chrome, zen, discord, slack]

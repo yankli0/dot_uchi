@@ -1,0 +1,5 @@
+---
+- name: Install notes apps
+  ansible.builtin.include_tasks: install.yml
+  vars:
+    client_apps: "{{ app_catalog | dict2items | selectattr('value.group','equalto','notes') | map(attribute='key') | list }}"

@@ -21,8 +21,9 @@ The `tests/` suite currently covers:
 - `test_syntax.py`: `--syntax-check` for `site.yml` and `control.yml`.
 - `test_isolation.py`: `--list-tasks` assertions that `--tags git`,
   `--tags browser`, and `--tags hermes` only touch the expected roles.
-
-A catalog test will be added once the per-app installer is implemented.
+- `test_catalog.py`: validates the app catalog in
+  `roles/client/apps/vars/catalog.yml` and that `inventory/group_vars/client.yml`
+  selects only known app ids.
 
 Run checks relevant to the change. Validate native shell/TOML configuration and
 local documentation/role references when relocating files.
