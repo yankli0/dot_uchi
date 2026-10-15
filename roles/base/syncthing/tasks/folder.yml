@@ -1,0 +1,62 @@
+---
+- name: Find existing folder configuration
+  ansible.builtin.set_fact:
+    syncthing_folder_current: >-
+      {{ syncthing_current.folders | selectattr('id', 'equalto', syncthing_folder.id)
+         | first | default({'devices': []}) }}
+
+- name: Add folder if absent
+  ansible.builtin.command:
+    argv:
+      - syncthing
+      - cli
+      - config
+      - folders
+      - add
+      - --id
+      - "{{ syncthing_folder.id }}"
+      - --label
+      - "{{ syncthing_folder.label }}"
+      - --path
+      - "{{ syncthing_folder.path }}"
+  when: syncthing_folder.id not in (syncthing_current.folders | map(attribute='id') | list)
+  changed_when: true
+
+- name: Set folder transfer mode
+  ansible.builtin.command:
+    argv: [syncthing, cli, config, folders, "{{ syncthing_folder.id }}", type, set, "{{ syncthing_folder.type }}"]
+  when: syncthing_folder_current.type | default('') != syncthing_folder.type
+  changed_when: true
+
+- name: Update existing folder settings
+  ansible.builtin.command:
+    argv:
+      - syncthing
+      - cli
+      - config
+      - folders
+      - "{{ syncthing_folder.id }}"
+      - "{{ item }}"
+      - set
+      - "{{ syncthing_folder[item] }}"
+  loop: [label, path]
+  when:
+    - syncthing_folder.id in (syncthing_current.folders | map(attribute='id') | list)
+    - syncthing_folder_current[item] != syncthing_folder[item]
+  changed_when: true
+
+- name: Share folder with declared peers
+  ansible.builtin.command:
+    argv:
+      - syncthing
+      - cli
+      - config
+      - folders
+      - "{{ syncthing_folder.id }}"
+      - devices
+      - add
+      - --device-id
+      - "{{ item }}"
+  loop: "{{ syncthing_folder.devices | default([]) }}"
+  when: item not in (syncthing_folder_current.devices | map(attribute='deviceID') | list)
+  changed_when: true

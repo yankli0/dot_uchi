@@ -1,0 +1,12 @@
+[Unit]
+Description=Restic {{ restic_job }} backup
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/restic-{{ restic_job }}-backup
+{% if restic_job == 'apps' %}
+ExecStopPost=%h/.local/bin/restic-apps-backup --recover
+{% endif %}
+UMask=0077
+TimeoutStartSec=infinity
+TimeoutStopSec=120

@@ -1,0 +1,5 @@
+---
+core_path: /run/media/yanklio/core
+core_create_if_missing: false
+core_expected_mount: /run/media/yanklio/core
+git_editor: nvim

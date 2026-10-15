@@ -1,0 +1,5 @@
+---
+syncthing_device_ids: {}
+syncthing_peers: []
+syncthing_folder_members: []
+syncthing_folder_type: sendreceive

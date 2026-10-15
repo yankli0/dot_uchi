@@ -1,0 +1,22 @@
+---
+- name: Setup tailscale
+  block:
+    - name: Check if tailscale is installed
+      ansible.builtin.command:
+        argv:
+          - sh
+          - -c
+          - "command -v tailscale"
+      register: tailscale_check
+      changed_when: false
+      failed_when: tailscale_check.rc not in [0, 1, 127]
+      check_mode: false
+      environment:
+        PATH: "{{ ansible_facts['env']['HOME'] }}/.local/bin:{{ ansible_facts['env']['PATH'] }}"
+
+    - name: Install tailscale
+      ansible.builtin.shell: "set -o pipefail; curl -fsSL {{ tailscale_install_url }} | sh"
+      args:
+        executable: /bin/bash
+      become: true
+      when: tailscale_check.rc != 0

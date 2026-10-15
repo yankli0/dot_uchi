@@ -1,0 +1,53 @@
+#!/usr/bin/bash
+set -euo pipefail
+umask 077
+source {{ (ansible_facts['env']['HOME'] ~ '/.config/restic/' ~ restic_job ~ '.env') | quote }}
+exec 9>{{ (ansible_facts['env']['HOME'] ~ '/.config/restic/' ~ restic_job ~ '.lock') | quote }}
+flock -n 9 || { echo "Backup or recovery already running" >&2; exit 1; }
+{% if restic_job == 'core' %}
+{% if core_expected_mount | default('') | length > 0 %}
+findmnt --mountpoint {{ core_expected_mount | quote }} --noheadings >/dev/null
+{% endif %}
+test -d {{ core_path | quote }}
+test -r {{ core_path | quote }}
+restic backup -- {{ core_path | quote }}
+{% else %}
+marker={{ (ansible_facts['env']['HOME'] ~ '/.config/restic/hermes.resume') | quote }}
+recover() {
+    if [[ -f "$marker" ]]; then
+        podman start hermes >/dev/null || return 1
+        rm -- "$marker"
+    fi
+}
+# Recover a prior interrupted backup before deciding the current running state.
+recover
+if [[ "${1:-}" == --recover ]]; then exit 0; fi
+test -d {{ (hermes_storage_dir ~ '/data') | quote }}
+test -f {{ (hermes_app_dir ~ '/apps/hermes/docker-compose.yml') | quote }}
+restore_state() {
+    result=$?
+    trap - EXIT INT TERM
+    if ! recover; then
+        echo "Hermes recovery failed; run restic-apps-backup --recover" >&2
+        exit 1
+    fi
+    exit "$result"
+}
+trap restore_state EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+if podman container exists hermes; then
+    running=$(podman inspect --format '{{ '{{.State.Running}}' }}' hermes)
+    if [[ "$running" == true ]]; then
+        # Record recovery intent before stopping, including if interrupted during stop.
+        printf '%s\n' hermes > "$marker"
+        podman stop --time 60 hermes >/dev/null
+    fi
+else
+    result=$?
+    [[ "$result" == 1 ]] || exit "$result"
+fi
+restic backup \
+    --exclude '**/.cache/**' --exclude '**/cache/**' \
+    -- {{ (hermes_storage_dir ~ '/data') | quote }} {{ (hermes_app_dir ~ '/apps/hermes') | quote }}
+{% endif %}

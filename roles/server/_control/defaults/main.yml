@@ -1,0 +1,4 @@
+---
+control_homelab_dir: "{{ server_app_dir }}" # noqa var-naming[no-role-prefix]
+control_action: status # noqa var-naming[no-role-prefix]
+control_app: hermes # noqa var-naming[no-role-prefix]

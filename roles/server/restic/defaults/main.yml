@@ -1,0 +1,8 @@
+---
+restic_core_repository: "rclone:gdrive:Backups/{{ inventory_hostname }}/core"
+restic_apps_repository: "rclone:gdrive:Backups/{{ inventory_hostname }}/apps"
+restic_core_enabled: false
+restic_apps_enabled: false
+# After testing a restore, set these to the exact tested repository strings.
+restic_core_restore_verified_repository: ""
+restic_apps_restore_verified_repository: ""

@@ -1,0 +1,74 @@
+---
+- name: Create mise directories
+  ansible.builtin.file:
+    path: "{{ ansible_facts['env']['HOME'] }}/{{ item }}"
+    state: directory
+    mode: "0755"
+  loop: [.local/bin, .config/mise/conf.d, .cache/dot-uchi]
+
+- name: Check user mise installation
+  ansible.builtin.stat:
+    path: "{{ ansible_facts['env']['HOME'] }}/.local/bin/mise"
+  register: mise_binary
+
+- name: Install mise
+  when: not mise_binary.stat.exists
+  block:
+    - name: Download mise installer
+      ansible.builtin.get_url:
+        url: https://mise.run
+        dest: "{{ ansible_facts['env']['HOME'] }}/.cache/dot-uchi/mise-install.sh"
+        mode: "0700"
+
+    - name: Run mise installer
+      ansible.builtin.command:
+        argv: [sh, "{{ ansible_facts['env']['HOME'] }}/.cache/dot-uchi/mise-install.sh"]
+        creates: "{{ ansible_facts['env']['HOME'] }}/.local/bin/mise"
+      environment:
+        MISE_INSTALL_PATH: "{{ ansible_facts['env']['HOME'] }}/.local/bin/mise"
+
+- name: Write shared development tool versions
+  ansible.builtin.template:
+    src: tools.toml.j2
+    dest: "{{ ansible_facts['env']['HOME'] }}/.config/mise/conf.d/dot-uchi.toml"
+    mode: "0644"
+    backup: true
+
+- name: Resolve independently selected development tools
+  ansible.builtin.set_fact:
+    mise_selected_tools: >-
+      {{ mise_tools.keys() | list if
+         ansible_run_tags | intersect(['all', 'base', 'client', 'server', 'dev', 'mise']) | length > 0
+         else ansible_run_tags | intersect(mise_tools.keys() | list)
+              | union(['node'] if ansible_run_tags | intersect(['yarn', 'ai-tools', 'neovim', 'editors']) | length > 0 else []) }}
+
+- name: Plan selected development tool installation
+  ansible.builtin.command:
+    argv: ["{{ ansible_facts['env']['HOME'] }}/.local/bin/mise", install, --dry-run-code,
+           "{{ mise_tools[item].tool }}@{{ mise_tools[item].version }}"]
+    chdir: "{{ ansible_facts['env']['HOME'] }}"
+  register: mise_install_plan
+  changed_when: false
+  failed_when: mise_install_plan.rc not in [0, 1]
+  loop: "{{ mise_selected_tools }}"
+  when: not ansible_check_mode
+
+- name: Install selected development tools when needed
+  ansible.builtin.command:
+    argv: ["{{ ansible_facts['env']['HOME'] }}/.local/bin/mise", install,
+           "{{ mise_tools[item.item].tool }}@{{ mise_tools[item.item].version }}"]
+    chdir: "{{ ansible_facts['env']['HOME'] }}"
+  when:
+    - not ansible_check_mode
+    - item.rc == 1
+  loop: "{{ mise_install_plan.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item }}"
+  changed_when: true
+
+- name: Build mise shims
+  ansible.builtin.command:
+    argv: ["{{ ansible_facts['env']['HOME'] }}/.local/bin/mise", reshim]
+    chdir: "{{ ansible_facts['env']['HOME'] }}"
+  when: not ansible_check_mode
+  changed_when: false

@@ -1,0 +1,6 @@
+---
+- name: Install notes apps
+  ansible.builtin.import_role:
+    name: ../roles/client/flatpak
+  vars:
+    flatpak_packages: "{{ notes_apps }}"

@@ -1,0 +1,35 @@
+---
+- name: Require Fedora server
+  ansible.builtin.assert:
+    that: ansible_facts['distribution'] == 'Fedora'
+    fail_msg: The server profile follows server.md and requires Fedora.
+
+- name: Install server system tools
+  ansible.builtin.package:
+    name: [nano, chrony, firewalld, python3-firewall, cockpit, cockpit-podman, cockpit-files]
+    state: present
+  become: true
+
+- name: Configure timezone
+  ansible.builtin.file:
+    src: "/usr/share/zoneinfo/{{ server_timezone }}"
+    dest: /etc/localtime
+    state: link
+    force: true
+  become: true
+
+- name: Enable server services
+  ansible.builtin.systemd_service:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  loop: [chronyd.service, firewalld.service, cockpit.socket]
+  become: true
+
+- name: Allow Cockpit access
+  ansible.posix.firewalld:
+    service: cockpit
+    state: enabled
+    permanent: true
+    immediate: true
+  become: true

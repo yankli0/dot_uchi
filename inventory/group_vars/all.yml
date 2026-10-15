@@ -1,0 +1,7 @@
+---
+# Fill IDs after enrolling each endpoint. IDs are defined once by host name.
+syncthing_device_ids: {}
+syncthing_folder_members: [xs-ea, gmk-de]
+# Initial enrollment deliberately omits peers until their IDs are known.
+syncthing_peers: []
+syncthing_folder_type: sendreceive

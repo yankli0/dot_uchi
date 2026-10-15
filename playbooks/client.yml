@@ -1,0 +1,45 @@
+---
+- name: Configure client base
+  ansible.builtin.import_playbook: base.yml
+  vars:
+    setup_hosts: client
+  tags: [client]
+
+- name: Configure client applications
+  hosts: client
+  tags: [client]
+  tasks:
+    - name: Install browsers
+      ansible.builtin.import_tasks: tasks/client/browser.yml
+      tags: [apps, browser, flatpak]
+    - name: Install communication apps
+      ansible.builtin.import_tasks: tasks/client/communication.yml
+      tags: [apps, communication, flatpak]
+    - name: Install notes apps
+      ansible.builtin.import_tasks: tasks/client/notes.yml
+      tags: [apps, notes, flatpak]
+    - name: Install modeling apps
+      ansible.builtin.import_tasks: tasks/client/3d-modeling.yml
+      tags: [apps, 3d-modeling, flatpak]
+    - name: Configure Neovim
+      ansible.builtin.import_role:
+        name: ../roles/client/neovim
+      tags: [dev, editors, neovim]
+    - name: Install Incus client
+      ansible.builtin.package:
+        name: incus-client
+        state: present
+      become: true
+      tags: [containers, incus-client]
+    - name: Configure Zed
+      ansible.builtin.import_role:
+        name: ../roles/client/zed
+      tags: [dev, editors, zed]
+    - name: Configure AI tools
+      ansible.builtin.import_role:
+        name: ../roles/client/ai-tools
+      tags: [dev, ai-tools]
+    - name: Configure local models
+      ansible.builtin.import_role:
+        name: ../roles/client/ollama
+      tags: [ai, ollama]

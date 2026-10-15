@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily {{ restic_job }} backup
+
+[Timer]
+OnCalendar=*-*-* {{ restic_job_hour }}:00:00
+RandomizedDelaySec=15m
+Persistent=true
+
+[Install]
+WantedBy=timers.target

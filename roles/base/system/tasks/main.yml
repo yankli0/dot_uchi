@@ -1,0 +1,6 @@
+---
+- name: Install system prerequisites
+  ansible.builtin.package:
+    name: [git, curl, wget, ca-certificates, python3, unzip]
+    state: present
+  become: true

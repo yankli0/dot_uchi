@@ -1,0 +1,7 @@
+---
+mise_tools:
+  node: {tool: node, version: latest}
+  deno: {tool: deno, version: latest}
+  yarn: {tool: "npm:yarn", version: latest}
+  lazygit: {tool: lazygit, version: latest}
+  gh: {tool: gh, version: latest}

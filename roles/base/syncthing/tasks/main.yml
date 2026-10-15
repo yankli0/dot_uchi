@@ -1,0 +1,70 @@
+---
+- name: Validate core before synchronization setup
+  ansible.builtin.import_role:
+    name: ../roles/base/core
+
+- name: Validate Syncthing membership and mode
+  ansible.builtin.assert:
+    that:
+      - inventory_hostname in syncthing_folder_members
+      - inventory_hostname not in syncthing_peers
+      - syncthing_peers | unique | length == syncthing_peers | length
+      - syncthing_peers | difference(syncthing_folder_members) | length == 0
+      - syncthing_folder_type in ['sendreceive', 'sendonly', 'receiveonly']
+    fail_msg: Declare unique peer host names in core membership and a valid folder mode.
+
+- name: Require IDs for explicitly declared peers
+  ansible.builtin.assert:
+    that:
+      - item in syncthing_device_ids
+      - syncthing_device_ids[item] | default('') is match('^[A-Z2-7]{7}(-[A-Z2-7]{7}){7}$')
+    fail_msg: "Missing or invalid device ID for peer {{ item }}. Enroll it first or omit it from syncthing_peers."
+  loop: "{{ syncthing_peers }}"
+
+- name: Reject duplicate enrolled device IDs
+  ansible.builtin.assert:
+    that:
+      - syncthing_device_ids.values() | list | unique | length == syncthing_device_ids | length
+    fail_msg: Each enrolled host must have its own unique Syncthing device ID.
+
+- name: Resolve peers for this endpoint
+  ansible.builtin.set_fact:
+    syncthing_devices: []
+
+- name: Build declared peer connections
+  ansible.builtin.set_fact:
+    syncthing_devices: "{{ syncthing_devices + [{'id': syncthing_device_ids[item], 'name': item}] }}"
+  loop: "{{ syncthing_peers }}"
+
+- name: Resolve canonical core folder
+  ansible.builtin.set_fact:
+    syncthing_folders:
+      - id: wekzg-5dp7t
+        label: core
+        path: "{{ core_path }}"
+        type: "{{ syncthing_folder_type }}"
+        devices: "{{ syncthing_devices | map(attribute='id') | list }}"
+
+- name: Install Syncthing
+  ansible.builtin.package:
+    name: syncthing
+    state: present
+  become: true
+
+- name: Enable user lingering
+  ansible.builtin.command:
+    argv: [loginctl, enable-linger, "{{ ansible_user }}"]
+    creates: "/var/lib/systemd/linger/{{ ansible_user }}"
+  become: true
+
+- name: Enable Syncthing user service
+  ansible.builtin.systemd_service:
+    name: syncthing.service
+    scope: user
+    enabled: true
+    state: started
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts['user_uid'] }}"
+
+- name: Configure device and folder connections
+  ansible.builtin.import_tasks: pairing.yml

@@ -1,0 +1,39 @@
+---
+- name: Configure server base
+  ansible.builtin.import_playbook: base.yml
+  vars:
+    setup_hosts: server
+  tags: [server]
+
+- name: Configure server applications
+  hosts: server
+  tags: [server]
+  tasks:
+    - name: Configure server system
+      ansible.builtin.import_tasks: tasks/server/system.yml
+      tags: [system, cockpit, hermes, incus, containers, apps]
+    - name: Configure Incus
+      ansible.builtin.import_role:
+        name: ../roles/server/incus
+      tags: [containers, incus]
+    - name: Write Hermes deployment
+      # Apps selection needs containers without selecting them for client apps.
+      ansible.builtin.import_role:
+        name: ../roles/base/podman
+      tags: [apps]
+    - name: Write Hermes deployment
+      ansible.builtin.import_role:
+        name: ../roles/server/hermes
+      tags: [apps, hermes]
+    - name: Prepare backup system prerequisites
+      ansible.builtin.import_role:
+        name: ../roles/base/system
+      tags: [backup, restic, rclone]
+    - name: Prepare backup container prerequisites
+      ansible.builtin.import_role:
+        name: ../roles/base/podman
+      tags: [backup, restic, rclone]
+    - name: Configure server backups
+      ansible.builtin.import_role:
+        name: ../roles/server/restic
+      tags: [backup, restic, rclone]

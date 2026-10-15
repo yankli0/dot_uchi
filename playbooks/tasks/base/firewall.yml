@@ -1,0 +1,30 @@
+---
+- name: Read firewall service state
+  ansible.builtin.service_facts:
+
+- name: Configure firewalld when active
+  when:
+    - "'firewalld.service' in ansible_facts.services"
+    - ansible_facts.services['firewalld.service'].state == 'running'
+  become: true
+  block:
+    - name: Trust Tailscale traffic
+      ansible.posix.firewalld:
+        zone: trusted
+        interface: tailscale0
+        state: enabled
+        permanent: true
+        immediate: true
+      when: >-
+        ansible_run_tags | intersect(['all', 'base', 'client', 'server', 'network',
+                                     'tailscale', 'incus', 'containers']) | length > 0
+
+    - name: Allow Syncthing transfers
+      ansible.posix.firewalld:
+        port: "{{ item }}"
+        state: enabled
+        permanent: true
+        immediate: true
+      loop: [22000/tcp, 22000/udp]
+      when: >-
+        ansible_run_tags | intersect(['all', 'base', 'client', 'server', 'sync', 'syncthing']) | length > 0

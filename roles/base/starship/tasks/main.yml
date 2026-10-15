@@ -1,0 +1,33 @@
+---
+- name: Create Starship directories
+  ansible.builtin.file:
+    path: "{{ ansible_facts['env']['HOME'] }}/{{ item }}"
+    state: directory
+    mode: "0755"
+  loop: [.config, .local/bin, .cache/dot-uchi]
+
+- name: Inspect Starship installation
+  ansible.builtin.stat:
+    path: "{{ ansible_facts['env']['HOME'] }}/.local/bin/starship"
+  register: starship_binary
+
+- name: Install Starship
+  when: not starship_binary.stat.exists
+  block:
+    - name: Download Starship installer
+      ansible.builtin.get_url:
+        url: https://starship.rs/install.sh
+        dest: "{{ ansible_facts['env']['HOME'] }}/.cache/dot-uchi/starship-install.sh"
+        mode: "0700"
+    - name: Run Starship installer
+      ansible.builtin.command:
+        argv: [sh, "{{ ansible_facts['env']['HOME'] }}/.cache/dot-uchi/starship-install.sh",
+               --yes, --bin-dir, "{{ ansible_facts['env']['HOME'] }}/.local/bin"]
+        creates: "{{ ansible_facts['env']['HOME'] }}/.local/bin/starship"
+
+- name: Deploy native Starship configuration
+  ansible.builtin.copy:
+    src: starship.toml
+    dest: "{{ ansible_facts['env']['HOME'] }}/.config/starship.toml"
+    mode: "0644"
+    backup: true

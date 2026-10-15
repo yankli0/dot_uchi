@@ -1,0 +1,73 @@
+---
+- name: Inspect existing Hermes deployment
+  ansible.builtin.stat:
+    path: "{{ hermes_app_dir }}/apps/hermes/docker-compose.yml"
+  register: hermes_existing
+
+- name: Read existing credentials for preservation
+  ansible.builtin.slurp:
+    src: "{{ hermes_app_dir }}/apps/hermes/docker-compose.yml"
+  register: hermes_existing_compose
+  when: hermes_existing.stat.exists
+  no_log: true
+
+- name: Resolve previous dashboard environment
+  ansible.builtin.set_fact:
+    hermes_previous_environment: >-
+      {{ ((hermes_existing_compose.content | default('') | b64decode | from_yaml)
+          | default({}, true)).get('services', {}).get('hermes', {}).get('environment', {}) }}
+  no_log: true
+
+- name: Resolve controller-injected or existing credentials
+  ansible.builtin.set_fact:
+    hermes_resolved_username: >-
+      {{ hermes_dashboard_username
+         | default(lookup('ansible.builtin.env', 'HERMES_DASHBOARD_BASIC_AUTH_USERNAME'), true)
+         or hermes_previous_environment.get('HERMES_DASHBOARD_BASIC_AUTH_USERNAME', '') }}
+    hermes_resolved_password: >-
+      {{ hermes_dashboard_password
+         | default(lookup('ansible.builtin.env', 'HERMES_DASHBOARD_BASIC_AUTH_PASSWORD'), true)
+         or hermes_previous_environment.get('HERMES_DASHBOARD_BASIC_AUTH_PASSWORD', '') }}
+    hermes_resolved_secret: >-
+      {{ hermes_dashboard_secret
+         | default(lookup('ansible.builtin.env', 'HERMES_DASHBOARD_BASIC_AUTH_SECRET'), true)
+         or hermes_previous_environment.get('HERMES_DASHBOARD_BASIC_AUTH_SECRET', '') }}
+  no_log: true
+
+- name: Require credentials for authenticated dashboard mode
+  ansible.builtin.assert:
+    that:
+      - hermes_resolved_username | length > 0
+      - hermes_resolved_password | length > 0
+      - hermes_resolved_secret | length > 0
+    fail_msg: Supply the three HERMES_DASHBOARD_BASIC_AUTH variables for authenticated dashboard mode.
+  when: not hermes_dashboard_insecure | bool
+  no_log: true
+
+- name: Create Hermes deployment directory
+  ansible.builtin.file:
+    path: "{{ hermes_app_dir }}/apps/hermes"
+    state: directory
+    mode: "0755"
+
+- name: Create Hermes storage directories
+  ansible.builtin.file:
+    path: "{{ hermes_storage_dir }}/{{ item }}"
+    state: directory
+    mode: "0755"
+  loop: [data, browser, models]
+
+- name: Write Hermes Compose file
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ hermes_app_dir }}/apps/hermes/docker-compose.yml"
+    mode: "0600"
+  no_log: true
+
+- name: Allow Hermes dashboard access
+  ansible.posix.firewalld:
+    port: "{{ hermes_dashboard_port }}/tcp"
+    state: enabled
+    permanent: true
+    immediate: true
+  become: true

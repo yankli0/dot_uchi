@@ -1,0 +1,28 @@
+---
+- name: Install selected Flatpak apps
+  when: flatpak_packages | length > 0
+  block:
+    - name: Install Flatpak
+      ansible.builtin.package:
+        name: flatpak
+        state: present
+      become: true
+
+    - name: Add user Flathub remote
+      ansible.builtin.command:
+        argv: [flatpak, remote-add, --if-not-exists, --user, flathub, https://flathub.org/repo/flathub.flatpakrepo]
+      changed_when: false
+
+    - name: Read installed user apps
+      ansible.builtin.command:
+        argv: [flatpak, list, --user, --app, --columns=application]
+      register: flatpak_installed
+      changed_when: false
+      when: not ansible_check_mode
+
+    - name: Install missing user apps
+      ansible.builtin.command:
+        argv: [flatpak, install, --noninteractive, --user, -y, flathub, "{{ item }}"]
+      loop: "{{ flatpak_packages }}"
+      when: ansible_check_mode or item not in flatpak_installed.stdout_lines
+      changed_when: true

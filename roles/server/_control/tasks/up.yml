@@ -1,0 +1,9 @@
+---
+- name: Discover Compose app targets
+  ansible.builtin.include_tasks: common.yml
+
+- name: "Run all containers"
+  ansible.builtin.command:
+    argv: [podman, compose, up, -d]
+    chdir: "{{ control_homelab_dir }}/apps/{{ item }}"
+  loop: "{{ _control_app_list }}"

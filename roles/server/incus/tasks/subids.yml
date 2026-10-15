@@ -1,0 +1,39 @@
+---
+- name: Check subordinate ID file
+  ansible.builtin.stat:
+    path: "{{ incus_subid_file }}"
+  register: incus_subid_stat
+  become: true
+
+- name: Read existing subordinate IDs
+  ansible.builtin.slurp:
+    src: "{{ incus_subid_file }}"
+  register: incus_subid_contents
+  when: incus_subid_stat.stat.exists
+  become: true
+
+- name: Validate existing subordinate ID ranges
+  ansible.builtin.assert:
+    that:
+      - item.split(':') | length == 3
+      - item.split(':')[1] is match('^[0-9]+$')
+      - item.split(':')[2] is match('^[0-9]+$')
+      - item.split(':')[0] != 'root' or item == 'root:1000000:1000000000'
+      - >-
+        item == 'root:1000000:1000000000'
+        or (item.split(':')[1] | int) + (item.split(':')[2] | int) <= 1000000
+        or (item.split(':')[1] | int) >= 1001000000
+    fail_msg: "Review {{ incus_subid_file }}: an existing mapping differs or overlaps the requested root range."
+  loop: >-
+    {{ (incus_subid_contents.content | default('') | b64decode).splitlines()
+       | reject('match', '^\\s*(#|$)') | list }}
+
+- name: Add requested root range
+  ansible.builtin.lineinfile:
+    path: "{{ incus_subid_file }}"
+    line: root:1000000:1000000000
+    create: true
+    owner: root
+    group: root
+    mode: "0644"
+  become: true

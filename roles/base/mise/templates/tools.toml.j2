@@ -1,0 +1,5 @@
+# Shared tool versions; user and project configuration remain separate.
+[tools]
+{% for name, spec in mise_tools.items() %}
+{{ spec.tool | to_json }} = {{ spec.version | to_json }}
+{% endfor %}

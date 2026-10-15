@@ -1,0 +1,4 @@
+[tools]
+opencode = "latest"
+claude-code = "latest"
+"npm:@earendil-works/pi-coding-agent" = "latest"
