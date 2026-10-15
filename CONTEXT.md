@@ -1,30 +1,40 @@
 # Machine setup
 
-Personal workstation and server setup, organized by the work each machine supports.
+Personal client and server capabilities with a common base.
 
 ## Language
 
 **Profile**:
-The explicit set of capabilities selected for a machine. The workstation and server have separate profiles.
-_Avoid_: Full setup, everything
+The capabilities selected for a machine. Client and server each include base tools.
 
-**App group**:
-A set of user-facing applications for one activity, such as browsing, notes, or 3D modeling. Membership expresses purpose rather than installation method.
-_Avoid_: Flatpak group
+**Base**:
+Tools and configuration shared by both machine profiles.
+_Avoid_: Shared profile
+
+**Client**:
+The personal machine profile for desktop apps, editors and local AI tools.
+_Avoid_: Workstation profile
 
 **Tool group**:
-A set of command-line tools for one activity, such as development, shell work, or container management.
-_Avoid_: Core tools when development tools are included
+Independently selectable tools for an activity, such as terminal, development or backup.
 
-**Server baseline**:
-The capabilities declared in `server.md`, together with the prerequisites needed to support them. Extra services require an explicit change to that baseline.
-_Avoid_: Homelab stack
-
-**Managed setup**:
-Installation and repeatable configuration owned by this repository.
+**App group**:
+Client applications for browsing, communication, notes or 3D modeling.
 
 **Enrollment**:
-The account authorization, device pairing, or initial credential entry that connects an installed tool to the user's services.
+Explicit account authorization, device pairing or credential setup after installation.
+
+**Core**:
+A host's canonical personal data directory shared by synchronization and core backup.
 
 **App lifecycle**:
-Starting, stopping, restarting, or inspecting a deployed container app.
+Starting, stopping, restarting or inspecting a deployed server app.
+
+**Core backup**:
+An independent backup of a host's core directory.
+
+**Apps backup**:
+An independent backup of server app state and deployment configuration under a declared consistency strategy.
+
+**Restore verification**:
+A successful recovery test for one particular backup repository.

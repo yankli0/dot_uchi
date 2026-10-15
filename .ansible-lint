@@ -1,5 +1,7 @@
 ---
 skip_list:
+  # Explicit role paths are required by the profile layout.
+  - role-name[path]
   - command-instead-of-module
   - no-changed-when
   - no-handler

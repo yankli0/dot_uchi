@@ -1,2 +1,5 @@
 archive/*
 homelab/
+.venv/
+.ansible/
+.commandcode/

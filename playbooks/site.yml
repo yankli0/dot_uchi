@@ -1,33 +1,8 @@
 ---
-- name: Apply core tools
-  hosts: all
-  tags: [core, workstation, server]
-  roles:
-    - _base
-    - zsh
-    - tmux
-    - vim
-    - neovim
-    - lazygit
-    - node
-    - ai-tools
-    - ollama
-    - tailscale
-    - podman
-    - gh
+- name: Configure clients
+  ansible.builtin.import_playbook: client.yml
+  tags: [client]
 
-- name: Apply workstation tools
-  hosts: workstation
-  tags: [workstation]
-  roles:
-    - zed
-    - flatpak
-
-- name: Apply server tools
-  hosts: server
+- name: Configure servers
+  ansible.builtin.import_playbook: server.yml
   tags: [server]
-  roles:
-    - _nginx
-    - glance
-    - hermes
-    - openwebui
