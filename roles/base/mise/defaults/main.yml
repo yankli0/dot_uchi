@@ -5,3 +5,5 @@ mise_tools:
   yarn: {tool: "npm:yarn", version: latest}
   lazygit: {tool: lazygit, version: latest}
   gh: {tool: gh, version: latest}
+
+mise_selected_tools: "{{ mise_tools.keys() | list }}"

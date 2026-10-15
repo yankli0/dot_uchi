@@ -14,26 +14,13 @@
       tags: [system, cockpit, hermes, incus, containers, apps]
     - name: Configure Incus
       ansible.builtin.import_role:
-        name: ../roles/server/incus
+        name: server/incus
       tags: [containers, incus]
     - name: Write Hermes deployment
-      # Apps selection needs containers without selecting them for client apps.
       ansible.builtin.import_role:
-        name: ../roles/base/podman
-      tags: [apps]
-    - name: Write Hermes deployment
-      ansible.builtin.import_role:
-        name: ../roles/server/hermes
+        name: server/hermes
       tags: [apps, hermes]
-    - name: Prepare backup system prerequisites
-      ansible.builtin.import_role:
-        name: ../roles/base/system
-      tags: [backup, restic, rclone]
-    - name: Prepare backup container prerequisites
-      ansible.builtin.import_role:
-        name: ../roles/base/podman
-      tags: [backup, restic, rclone]
     - name: Configure server backups
       ansible.builtin.import_role:
-        name: ../roles/server/restic
+        name: server/restic
       tags: [backup, restic, rclone]

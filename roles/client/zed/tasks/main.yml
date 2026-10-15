@@ -19,6 +19,7 @@
       args:
         executable: /bin/bash
       when: zed_check.rc != 0
+      changed_when: true
 
     - name: Create .config/zed directory
       ansible.builtin.file:

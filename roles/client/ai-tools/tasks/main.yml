@@ -1,4 +1,10 @@
 ---
+- name: Ensure Node runtime is available for AI tools
+  ansible.builtin.include_role:
+    name: base/mise
+  vars:
+    mise_selected_tools: [node]
+
 - name: Create AI configuration directories
   ansible.builtin.file:
     path: "{{ ansible_facts['env']['HOME'] }}/.config/{{ item }}"

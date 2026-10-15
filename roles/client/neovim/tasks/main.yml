@@ -13,6 +13,12 @@
         state: directory
         mode: "0755"
 
+    - name: Ensure Node runtime is available for Neovim
+      ansible.builtin.include_role:
+        name: base/mise
+      vars:
+        mise_selected_tools: [node]
+
     - name: Copy neovim config
       ansible.builtin.copy:
         src: .config/nvim/

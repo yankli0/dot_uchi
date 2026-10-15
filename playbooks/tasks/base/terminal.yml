@@ -8,25 +8,25 @@
 
 - name: Configure Fastfetch
   ansible.builtin.import_role:
-    name: ../roles/base/fastfetch
+    name: base/fastfetch
   tags: [fastfetch]
 
 - name: Configure Starship
   ansible.builtin.import_role:
-    name: ../roles/base/starship
+    name: base/starship
   tags: [starship, zsh]
 
 - name: Configure Zsh
   ansible.builtin.import_role:
-    name: ../roles/base/zsh
+    name: base/zsh
   tags: [zsh]
 
 - name: Configure tmux
   ansible.builtin.import_role:
-    name: ../roles/base/tmux
+    name: base/tmux
   tags: [tmux]
 
 - name: Configure Vim
   ansible.builtin.import_role:
-    name: ../roles/base/vim
+    name: base/vim
   tags: [vim]

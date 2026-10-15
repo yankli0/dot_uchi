@@ -1,8 +1,4 @@
 ---
-- name: Validate canonical backup source
-  ansible.builtin.import_role:
-    name: ../roles/base/core
-
 - name: Install backup tools
   ansible.builtin.package:
     name: [rclone, restic, util-linux]

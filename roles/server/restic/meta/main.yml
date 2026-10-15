@@ -1,0 +1,5 @@
+---
+dependencies:
+  - role: base/core
+  - role: base/system
+  - role: base/podman

@@ -3,44 +3,42 @@
   hosts: "{{ setup_hosts | default('all') }}"
   serial: 1
   tasks:
-    - name: Install system prerequisites
+    - name: Configure core validation
       ansible.builtin.import_role:
-        name: ../roles/base/system
-      tags: [base, system, terminal, dev, passwords, network, containers, sync, apps,
-             git, ssh, fastfetch, zsh, starship, tmux, vim, mise, gh, lazygit, node, deno, yarn,
-             pass-cli, tailscale, podman, syncthing, hermes, incus, incus-client, cockpit,
-             neovim, zed, editors, ai-tools, ollama, ai, flatpak, browser, communication, notes, 3d-modeling]
+        name: base/core
+      tags: [base]
+    - name: Configure system prerequisites
+      ansible.builtin.import_role:
+        name: base/system
+      tags: [base, system]
     - name: Configure Git
       ansible.builtin.import_role:
-        name: ../roles/base/git
+        name: base/git
       tags: [base, dev, git]
     - name: Configure optional SSH identity
       ansible.builtin.import_role:
-        name: ../roles/base/ssh
+        name: base/ssh
       tags: [base, ssh]
     - name: Configure terminal tools
       ansible.builtin.import_tasks: tasks/base/terminal.yml
       tags: [base, terminal]
     - name: Configure development tools
       ansible.builtin.import_role:
-        name: ../roles/base/mise
+        name: base/mise
       tags: [base, dev, mise, gh, lazygit, node, deno, yarn, ai-tools, neovim, editors]
     - name: Configure password management
       ansible.builtin.import_role:
-        name: ../roles/base/passwords
+        name: base/passwords
       tags: [base, passwords, pass-cli]
     - name: Configure Tailscale
       ansible.builtin.import_role:
-        name: ../roles/base/tailscale
-      tags: [base, network, tailscale, incus, containers]
+        name: base/tailscale
+      tags: [base, network, tailscale]
     - name: Configure containers
       ansible.builtin.import_role:
-        name: ../roles/base/podman
-      tags: [base, containers, podman, hermes]
+        name: base/podman
+      tags: [base, containers, podman]
     - name: Configure Syncthing
       ansible.builtin.import_role:
-        name: ../roles/base/syncthing
+        name: base/syncthing
       tags: [base, sync, syncthing]
-    - name: Configure active firewall
-      ansible.builtin.import_tasks: tasks/base/firewall.yml
-      tags: [base, network, tailscale, sync, syncthing, incus, containers]

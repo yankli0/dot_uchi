@@ -7,3 +7,4 @@
     argv: [podman, compose, down]
     chdir: "{{ control_homelab_dir }}/apps/{{ item }}"
   loop: "{{ _control_app_list }}"
+  changed_when: true

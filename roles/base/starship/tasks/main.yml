@@ -24,6 +24,7 @@
         argv: [sh, "{{ ansible_facts['env']['HOME'] }}/.cache/dot-uchi/starship-install.sh",
                --yes, --bin-dir, "{{ ansible_facts['env']['HOME'] }}/.local/bin"]
         creates: "{{ ansible_facts['env']['HOME'] }}/.local/bin/starship"
+      changed_when: true
 
 - name: Deploy native Starship configuration
   ansible.builtin.copy:

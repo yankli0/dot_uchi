@@ -1,7 +1,6 @@
 ---
-- name: Validate core before synchronization setup
-  ansible.builtin.import_role:
-    name: ../roles/base/core
+- name: Gather service facts
+  ansible.builtin.service_facts:
 
 - name: Validate Syncthing membership and mode
   ansible.builtin.assert:
@@ -56,6 +55,7 @@
     argv: [loginctl, enable-linger, "{{ ansible_user }}"]
     creates: "/var/lib/systemd/linger/{{ ansible_user }}"
   become: true
+  changed_when: true
 
 - name: Enable Syncthing user service
   ansible.builtin.systemd_service:
@@ -65,6 +65,19 @@
     state: started
   environment:
     XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts['user_uid'] }}"
+
+- name: Allow Syncthing transfers through firewalld
+  ansible.posix.firewalld:
+    port: "{{ item }}"
+    state: enabled
+    permanent: true
+    immediate: true
+  become: true
+  loop: [22000/tcp, 22000/udp]
+  when:
+    - ansible_facts.services is defined
+    - "'firewalld.service' in ansible_facts.services"
+    - ansible_facts.services['firewalld.service'].state == 'running'
 
 - name: Configure device and folder connections
   ansible.builtin.import_tasks: pairing.yml

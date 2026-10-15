@@ -51,6 +51,7 @@
           - -N
           - "{{ ssh_key_passphrase | default(ssh_passphrase_prompt.user_input | default('')) }}"
         creates: "{{ ssh_key_path }}"
+      changed_when: true
       no_log: true
 
 - name: Read public key for enrollment

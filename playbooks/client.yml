@@ -35,7 +35,7 @@
       tags: [3d-modeling, never]
     - name: Configure Neovim
       ansible.builtin.import_role:
-        name: ../roles/client/neovim
+        name: client/neovim
       tags: [dev, editors, neovim]
     - name: Install Incus client
       ansible.builtin.package:
@@ -45,13 +45,13 @@
       tags: [containers, incus-client]
     - name: Configure Zed
       ansible.builtin.import_role:
-        name: ../roles/client/zed
+        name: client/zed
       tags: [dev, editors, zed]
     - name: Configure AI tools
       ansible.builtin.import_role:
-        name: ../roles/client/ai-tools
+        name: client/ai-tools
       tags: [dev, ai-tools]
     - name: Configure local models
       ansible.builtin.import_role:
-        name: ../roles/client/ollama
+        name: client/ollama
       tags: [ai, ollama]
