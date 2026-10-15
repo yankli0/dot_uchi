@@ -1,3 +1,0 @@
----
-- name: Run container control action
-  ansible.builtin.include_tasks: "{{ control_action }}.yml"
