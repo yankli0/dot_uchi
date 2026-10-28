@@ -1,95 +1,60 @@
-# Dotfiles
+# dot_uchi — Ansible-managed client machines
 
-Personal client and Fedora server configuration with Ansible.
+Declarative config for the personal clients (Fedora + COSMIC): system base,
+shell, apps, editor, per-host themes and shell layout. Old-archived flavor
+lives under `archive/` (not maintained).
 
-## Setup
+## Machines
 
-```sh
-./install.sh
-source .venv/bin/activate
-ansible-playbook playbooks/client.yml -K
-ansible-playbook playbooks/server.yml -K
-```
+| Host | Theme | Shell layout |
+| --- | --- | --- |
+| `brisingamen` | catppuccin mocha/rosewater + wallpaper | bottom panel, autohide, glass on |
+| `gleipnir` | gruvbox dark/green + wallpaper | left edge-flush square panel, no autohide |
 
-Bootstrap uses Python 3.13 for the controller. No configuration is applied by bootstrap.
-Development and AI tools follow `latest` releases without version pins.
-The root [mise.toml](mise.toml) also declares shared development tools for working
-in this repository; install them locally with `mise install`.
-Git uses supplied `git_user_name`/`git_user_email`, then existing global identity,
-then prompts for missing values. Unattended Git runs must supply missing values.
-Git prompts do not run for terminal, passwords, or backup selections.
-SSH generation is opt-in; see [SSH](roles/base/ssh/README.md).
+Per-host config lives entirely in `inventory/host_vars/<host>.yml` (the canonical
+knob doc); group defaults in `inventory/group_vars/all.yml` + `client.yml`. Each machine gets its own independent playbook — no shared profile.
 
-## Ownership and selection
+## Commands
 
-- `inventory/hosts.yml`: connection details.
-- `inventory/group_vars/`: shared choices and client application groups.
-- `inventory/host_vars/`: canonical core paths, mounts, peer selections, and enrollment.
-- `playbooks/base.yml`: shared tools; included by both profiles.
-- `playbooks/client.yml`: client apps, editors, AI tools and local models.
-- `playbooks/server.yml`: [server selections](server.md), Incus, Cockpit and Hermes.
-- `roles/{base,client,server}/`: tasks and native configuration owned by each tool.
-- `playbooks/tasks/{base,client,server}/`: simple package lists and task groups.
-
-Group tags are `terminal`, `dev`, `passwords`, `network`, `containers`, `sync`,
-`apps`, and `backup`. Individual tags include `git`, `ssh`, `zsh`, `starship`,
-`tmux`, `vim`, `fastfetch`, `mise`, `node`, `deno`, `yarn`, `lazygit`, `gh`,
-`pass-cli`, `tailscale`, `podman`, `syncthing`, `restic`, `rclone`, `incus`, `cockpit`,
-`hermes`, `neovim`, `zed`, `ai-tools`, `ollama`, and client app groups.
-Selecting a tool includes its setup prerequisites. The `base` tag selects all
-shared tools; `client` and `server` select their respective complete profiles.
+Run your host's playbook (system packages need sudo on first run or after
+changes):
 
 ```sh
-ansible-playbook playbooks/base.yml --limit xs-ea --tags terminal -K
-ansible-playbook playbooks/client.yml --tags browser -K
-ansible-playbook playbooks/server.yml --tags hermes -K
-ansible-playbook playbooks/server.yml --tags backup -K
-ansible-playbook playbooks/site.yml --list-tasks --tags git
+ansible-playbook playbooks/<host>.yml --ask-become-pass
 ```
 
-`roles.yml` remains a compatibility entrypoint to `site.yml`.
-Shell history, private keys, credentials and account sessions remain local.
-Changing profile selections does not uninstall old applications.
-
-## Enrollment
-
-Run `gh auth login`, `tailscale up`, and `pass-cli login` as the target user.
-[Secrets](docs/secrets.md) documents controller-side injection.
-[Syncthing](roles/base/syncthing/README.md) explains mutual enrollment, per-device
-modes and the external-drive mount guard.
-[Backups](docs/backups.md) documents two independent repositories and restore tests.
-Restic and rclone belong only to the server profile; clients sync core to the
-server with Syncthing and do not install or configure backup tools.
-Timers default to disabled. Existing enrolled backups require explicit migration.
-
-Hermes writes to `~/serve/apps/hermes` and stores persistent data in
-`~/storage/hermes/data`; [maintenance](roles/server/hermes/README.md) is explicit.
-Control lifecycle separately:
+Only theme/shell/editor (no sudo needed):
 
 ```sh
-ansible-playbook playbooks/control.yml -e control_action=status
-ansible-playbook playbooks/control.yml -e control_action=up -e control_app=hermes
+ansible-playbook playbooks/<host>.yml --tags cosmic,editors
 ```
 
-`control_app=all` includes existing app directories, including old deployments.
-
-## Local validation
+Everything else:
 
 ```sh
-python -m unittest discover tests/
+yamllint ... ; ansible-lint              # repo style gates
+ansible-playbook playbooks/<host>.yml --syntax-check
+pytest -q tests/                          # structural validation
 ```
 
-Tests assume a compatible Ansible controller environment (Python 3.13, Ansible
-collections installed). They run `--syntax-check` on `site.yml` and `control.yml`
-and verify that tags only pull in the expected roles.
+## Adding a host
 
-Additional manual checks:
+1. `inventory/hosts.yml` — add the host (plain or `ansible_connection: local`).
+2. `inventory/host_vars/<host>.yml` — every knob (theme_name/flavour/accent,
+   wallpaper, fonts_install_list, ai_tools_extra, …) gets its documented lines;
+   view brisingamen's file as the reference.
+3. `playbooks/<host>.yml` — copy the existing playbook body, change `hosts:`.
+4. Theme assets — pick assets from `assets/themes/<name>/cosmic/` (per
+   flavour + accent), or add a new theme via
+   `assets/themes/<name>/accents.yml` (+ `theme_ron_template`) and cosmic .ron
+   files; the Zed mapping then lives in `roles/dev/zed/defaults` (`zed_themes`).
+5. Shell snapshot — `assets/cosmic-shell/<host>/` (capture from the machine;
+   see that directory's README) or remove the cosmic_shell import until you do.
 
-```sh
-ANSIBLE_LOCAL_TEMP=/tmp/ansible-local TMPDIR=/tmp ansible-playbook --syntax-check playbooks/site.yml
-ANSIBLE_LOCAL_TEMP=/tmp/ansible-local TMPDIR=/tmp ansible-playbook --syntax-check playbooks/control.yml
-ansible-lint playbooks/site.yml playbooks/control.yml
-```
+## Refresh cycle for themes and shell snapshots
 
-See [implementation verification](docs/role-redesign-verification.md) for fixture checks
-and live checks that have not been performed.
+- COSMIC UI changes: tweak in the UI for testing; the next playbook run
+  restores the repo snapshot. Permanent changes: update the snapshot under
+  `assets/cosmic-shell/<host>/` first (see its README), then run.
+- Catppuccin palettes: re-fetch `.ron` files from the pinned upstream commit
+  (see `assets/themes/catppuccin/cosmic/README.md`), then run the playbook.
