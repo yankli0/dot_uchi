@@ -41,6 +41,7 @@
     fail_msg: >-
       No pinned checksum for accent '{{ theme_accent }}' under
       zed_themes.{{ theme_name }}.asset.checksums; pin the release JSON.
+  when: zed_themes[theme_name].asset is defined
 
 - name: Resolve selected extension set for the theme
   ansible.builtin.set_fact:
@@ -95,6 +96,9 @@
   loop: "{{ _zed_extensions_selected }}"
   loop_control:
     label: "{{ item }}"
+  # get_url cannot validate a checksum against a dest dir that check mode
+  # never materializes.
+  when: not ansible_check_mode
   become: false
 
 - name: Install selected Zed extensions
@@ -108,6 +112,7 @@
   loop: "{{ _zed_extensions_selected }}"
   loop_control:
     label: "{{ item }}"
+  when: not ansible_check_mode
   become: false
 
 - name: Remove unselected Zed extensions
@@ -142,7 +147,9 @@
     checksum: "{{ _zed_theme_asset.checksums[theme_accent] }}"
     dest: "{{ user_config_dir }}/zed/themes/catppuccin-{{ theme_accent }}.json"
     mode: "0644"
-  when: _zed_theme_asset is not none
+  when:
+    - _zed_theme_asset is not none
+    - not ansible_check_mode
   become: false
 
 - name: Deploy Zed settings from host configuration
