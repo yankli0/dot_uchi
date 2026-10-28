@@ -152,8 +152,10 @@ def test_every_provisioned_url_catalog_has_https_entries():
         assert spec["dir"]
 
     for theme, mapping in zed_meta["zed_themes"].items():
-        assert mapping["modes"] and mapping["names"]
-        assert set(mapping["modes"]) == set(mapping["names"]), (
+        assert mapping["modes"]
+        names = mapping["names"] if "names" in mapping else (
+            mapping["asset"] and mapping["asset"]["flavour_names"])
+        assert names and set(mapping["modes"]) == set(names), (
             f"zed_themes[{theme}]: modes/names keys must match (per flavour)"
         )
         assert set(mapping["extensions"]) <= set(catalog), (
@@ -163,6 +165,12 @@ def test_every_provisioned_url_catalog_has_https_entries():
             assert set(mapping.get("icon_names", {})) == set(mapping["modes"]), (
                 f"zed_themes[{theme}]: icon_names must cover every flavour"
             )
+        asset = mapping.get("asset")
+        if asset is not None:
+            assert "{accent}" in asset["url"] and set(asset["checksums"])
+            accents = _load_yaml(ASSETS / "themes" / theme / "accents.yml")["accents"]
+            missing = set(accents) - set(asset["checksums"])
+            assert not missing, f"zed_themes[{theme}].asset unpinned accents: {missing}"
 
 
 def test_provenance_docs_exist_for_theme_assets():

@@ -35,24 +35,35 @@
     that: zed_extensions | difference(zed_extension_catalog.keys() | list) | length == 0
     fail_msg: "Unknown zed extension ids: {{ zed_extensions | difference(zed_extension_catalog.keys() | list) }}"
 
+- name: Validate theme asset support for the host accent
+  ansible.builtin.assert:
+    that: theme_accent in (zed_themes[theme_name].asset.checksums | default({}))
+    fail_msg: >-
+      No pinned checksum for accent '{{ theme_accent }}' under
+      zed_themes.{{ theme_name }}.asset.checksums; pin the release JSON.
+
 - name: Resolve selected extension set for the theme
   ansible.builtin.set_fact:
     _zed_extensions_selected: "{{ (zed_themes[theme_name].extensions | default([])) | union(zed_extensions) }}"
+    _zed_theme_asset: "{{ zed_themes[theme_name].asset | default(none) }}"
 
 - name: Resolve final Zed theme and icon names
   ansible.builtin.set_fact:
     _zed_theme:
       mode: "{{ zed_themes[theme_name].modes[theme_flavour] }}"
-      name: "{{ zed_themes[theme_name].names[theme_flavour] }}"
-      light: >-
-        {{ zed_themes[theme_name].names | dict2items
-           | selectattr('key', 'in',
-               zed_themes[theme_name].modes | dict2items
-               | selectattr('value', 'equalto', 'light') | map(attribute='key') | list)
-           | map(attribute='value') | first | default(_zed_theme_name_default) }}
+      name: "{{ zed_theme_names[theme_flavour] ~ zed_theme_suffix }}"
+      light: "{{ zed_theme_names[zed_light_flavour] ~ zed_theme_suffix }}"
       icons: "{{ zed_themes[theme_name].icon_names | default(none) }}"
   vars:
-    _zed_theme_name_default: "{{ zed_themes[theme_name].names[theme_flavour] }}"
+    zed_theme_names: >-
+      {{ zed_themes[theme_name].asset.flavour_names | default(zed_themes[theme_name].names) }}
+    zed_light_flavour: >-
+      {{ zed_themes[theme_name].modes | dict2items
+         | selectattr('value', 'equalto', 'light') | map(attribute='key') | first }}
+    zed_theme_suffix: >-
+      {{ ''
+         if (zed_themes[theme_name].asset | default({})).default_accent | default(theme_accent) == theme_accent
+         else ' (' ~ theme_accent ~ ')' }}
 
 - name: Ensure Zed config, cache, and extension directories exist
   ansible.builtin.file:
@@ -107,6 +118,31 @@
   loop_control:
     label: "{{ item.key }}"
   when: item.key not in _zed_extensions_selected
+  become: false
+
+- name: Remove the previously sourced catppuccin theme extension
+  ansible.builtin.file:
+    path: "{{ user_home }}/.local/share/zed/extensions/installed/catppuccin"
+    state: absent
+  become: false
+
+# Per-accent themes: the official release JSON registers the accented theme
+# names resolved into settings above (source-compiled catppuccin extension
+# does not load from a manual copy).
+- name: Ensure the Zed user themes directory exists
+  ansible.builtin.file:
+    path: "{{ user_config_dir }}/zed/themes"
+    state: directory
+    mode: "0755"
+  become: false
+
+- name: Install the accented host theme JSON (checksum-pinned)
+  ansible.builtin.get_url:
+    url: "{{ _zed_theme_asset.url | replace('{accent}', theme_accent) }}"
+    checksum: "{{ _zed_theme_asset.checksums[theme_accent] }}"
+    dest: "{{ user_config_dir }}/zed/themes/catppuccin-{{ theme_accent }}.json"
+    mode: "0644"
+  when: _zed_theme_asset is not none
   become: false
 
 - name: Deploy Zed settings from host configuration

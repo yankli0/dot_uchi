@@ -7,11 +7,10 @@ zed_install_version: "v1.25.3"
 # A theme's `extensions` list (zed_themes below) is installed automatically;
 # additional entries per host via zed_extensions. Unselected entries are
 # removed. `dir` is the archive's top-level directory for that release.
+# Note: the upstream catppuccin THEME extension only loads as a registry
+# install; per-accent themes ship as release JSONs in
+# ~/.config/zed/themes/ via zed_themes.*.asset below.
 zed_extension_catalog:
-  catppuccin:
-    url: https://github.com/catppuccin/zed/archive/refs/tags/v0.2.27.tar.gz
-    checksum: sha256:77cd147b16b901d683d6d6f208beee366d76c5ec859cc31d193ed8eb390499b0
-    dir: catppuccin-zed-0.2.27
   catppuccin-icons:
     url: https://github.com/catppuccin/zed-icons/archive/refs/tags/v1.24.0.tar.gz
     checksum: sha256:e3f1a11f8d3e899e1f25d162b9367f476788e077aa4c6a5c054f1bd790eaf982
@@ -22,27 +21,49 @@ zed_extensions: []
 # Zed UI mapping per COSMIC theme (theme_name in host_vars):
 #   extensions: catalog ids installed for this theme (built-in themes: [])
 #   modes:      flavour -> light|dark
-#   names:      flavour -> Zed theme name
-#   icon_names: optional flavour -> Zed icon theme name; omit for themes
-#               without an icon extension (Zed keeps its default icons)
+#   names:      flavour -> registry/built-in Zed theme name
+#   icon_names: optional flavour -> Zed icon theme name (omit for default
+#               icons)
+#   asset:      optional release JSON installed into ~/.config/zed/themes/;
+#               `url` + per-accent checksums, pinned; `flavour_names` are the
+#               plain Zed theme names it registers; accents other than
+#               `default_accent` get a " (accent)" suffix in Zed's UI.
 zed_themes:
   catppuccin:
-    extensions: [catppuccin, catppuccin-icons]
+    extensions: [catppuccin-icons]
     modes:
       latte: light
       frappe: dark
       macchiato: dark
       mocha: dark
-    names:
-      latte: "Catppuccin Latte"
-      frappe: "Catppuccin Frappé"
-      macchiato: "Catppuccin Macchiato"
-      mocha: "Catppuccin Mocha"
     icon_names:
       latte: "Catppuccin Latte"
       frappe: "Catppuccin Frappé"
       macchiato: "Catppuccin Macchiato"
       mocha: "Catppuccin Mocha"
+    asset:
+      url: https://github.com/catppuccin/zed/releases/download/v0.2.27/catppuccin-{accent}.json
+      default_accent: mauve   # ships as the extension's default (no suffix)
+      flavour_names:
+        latte: "Catppuccin Latte"
+        frappe: "Catppuccin Frappé"
+        macchiato: "Catppuccin Macchiato"
+        mocha: "Catppuccin Mocha"
+      checksums:
+        blue: sha256:7c64484cd61db7db0fc33fb992a799f49f84fae6f98f75eae73e1e6bf25f6e8c
+        flamingo: sha256:429012e63b976e265c6c079a5d8f3d688474000b8a25384d8788cb0dc5bc2bdf
+        green: sha256:396d6a9cc1cac6a372a15e62ac4a7f7cc1281667c4e4072b8184260bbd358942
+        lavender: sha256:2884a82473dc24f1a66d12d526d50ca045e447e00d93169eab97fec58613e756
+        maroon: sha256:c8f51e305783c1ec9d287d7e72ab0137d8518ee33a8130f5812e04c1ac89bd77
+        mauve: sha256:b8f13dcb1e914f559666ccf0c39fa22d9d08aebb8461d75f88e05a03bb9ec1b1
+        peach: sha256:9ab7c1fae29ff0e5e39a240822ab8f45a30f6ef892cfc6e5100389a0341adebc
+        pink: sha256:98d952acfc616288d905330922df856d7913aae31544ae935f16a9ae03e5d5ff
+        red: sha256:3ce81a3a07c932c018cf72694d3bfbd0e6d82fe15cb7388546a2335e90d2e38e
+        rosewater: sha256:64270ea81c771eb4398f0ebf1dcfd8b535fbd0d38b0336aaa6393543b1289ad9
+        sapphire: sha256:6c49b5dc694e460b980ed78e275e529b89d5c68e4fa46a95a06e8241cdcaf506
+        sky: sha256:29c7c1524c00cfd193f96ebd95cfe3fd99a7f30a277ace2e3022dd29073aa64e
+        teal: sha256:60e012d1c8fbeea5a8bb9843563982771ab8baf28f574f329b42afde10d6e22a
+        yellow: sha256:b1b3c19d26b1190a2283a5ba26ad833c129a3745c6c98e2b5790d42e3e42d2d2
   gruvbox:
     extensions: []            # Gruvbox themes are Zed built-ins
     modes:
