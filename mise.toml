@@ -1,7 +1,7 @@
-# Development tools available when working in this repository.
+# Development tools for working in this repository.
 [tools]
-node = "latest"
-deno = "latest"
+node       = "latest"
+deno       = "latest"
 "npm:yarn" = "latest"
-lazygit = "latest"
-gh = "latest"
+lazygit    = "latest"
+gh         = "latest"

@@ -1,4 +1,0 @@
----
-# Compatibility entrypoint: use the same profiles and tags as site.yml.
-- name: Apply selected profile tasks
-  ansible.builtin.import_playbook: site.yml

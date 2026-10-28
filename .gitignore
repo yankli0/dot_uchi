@@ -4,3 +4,4 @@ homelab/
 .ansible/
 .commandcode/
 __pycache__/
+archive/

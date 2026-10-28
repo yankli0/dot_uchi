@@ -1,0 +1,49 @@
+---
+# Host configuration for gleipnir (laptop, Gruvbox COSMIC).
+# Every knob consumed by playbooks/gleipnir.yml is listed here.
+# Group-wide defaults live in inventory/group_vars/all.yml; app selection
+# in inventory/group_vars/client.yml. Empty lists mean "install nothing".
+
+# ── System ────────────────────────────────────────────────────────────────────
+hostname: gleipnir
+
+# ── Fonts (fonts role) ────────────────────────────────────────────────────────
+# Explicit opt-in; keys of font_catalog. Empty list = install nothing.
+fonts_install_list:
+  - jetbrains_mono_nerd_font
+# Optional: register the COSMIC toolkit default monospace font.
+cosmic_mono_font_family: "JetBrainsMono Nerd Font"
+
+# ── COSMIC theme (cosmic_de role) ─────────────────────────────────────────────
+# Palette files live in assets/themes/<name>/. Wallpaper is relative to
+# assets/wallpapers/; an empty value skips the wallpaper.
+theme_name: gruvbox
+theme_flavour: dark
+theme_accent: green
+theme_wallpaper: gleipnir/backwater.png
+
+# ── COSMIC shell layout (cosmic_shell role) ──────────────────────────────────
+# Vertical panel docked LEFT, no gap to the screen edge (anchor: Left,
+# anchor_gap: false), bottom dock as on brisingamen. Snapshot:
+# assets/cosmic-shell/gleipnir/ — verify against the live machine and refresh
+# from it (assets/cosmic-shell/README.md).
+
+# ── COSMIC terminal (cosmic_term role) ────────────────────────────────────────
+# Colors follow the COSMIC theme (gruvbox asset); no separate terminal theme
+# exists for stock cosmic-term. Font set explicitly.
+cosmic_term_font_family: "JetBrainsMono Nerd Font"
+# cosmic_term_font_size: 14
+
+# ── AI tools (ai_tools role) ──────────────────────────────────────────────────
+# Opt-in extras beyond ai_tools_catalog (see that role's defaults).
+ai_tools_extra:
+  - command_code_cli
+  - command_code_desktop
+
+# ── Zed (zed role) ────────────────────────────────────────────────────────────
+# Extension + UI theme names follow the host COSMIC theme automatically
+# (see zed_themes in roles/dev/zed/defaults). Optional extras like brisingamen.
+# zed_extensions: []
+# Editor fonts (role defaults shown below).
+# zed_ui_font_family: "JetBrainsMono Nerd Font"
+# zed_buffer_font_family: "JetBrainsMono Nerd Font Mono"

@@ -1,6 +1,0 @@
----
-server_timezone: Europe/Warsaw
-server_app_dir: "{{ ansible_facts['env']['HOME'] }}/serve"
-server_storage_dir: "{{ ansible_facts['env']['HOME'] }}/storage"
-hermes_app_dir: "{{ server_app_dir }}"
-hermes_storage_dir: "{{ server_storage_dir }}/hermes"

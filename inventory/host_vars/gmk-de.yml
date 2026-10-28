@@ -1,5 +1,0 @@
----
-core_path: /home/yanklio/core
-core_create_if_missing: true
-restic_core_enabled: false
-restic_apps_enabled: false

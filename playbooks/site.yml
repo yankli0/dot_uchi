@@ -1,8 +1,0 @@
----
-- name: Configure clients
-  ansible.builtin.import_playbook: client.yml
-  tags: [client]
-
-- name: Configure servers
-  ansible.builtin.import_playbook: server.yml
-  tags: [server]

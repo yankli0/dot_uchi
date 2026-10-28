@@ -1,0 +1,56 @@
+---
+# Host configuration for brisingamen (laptop, Catppuccin COSMIC).
+# Every knob consumed by playbooks/brisingamen.yml is listed here.
+# Group-wide defaults live in inventory/group_vars/all.yml; app selection
+# in inventory/group_vars/client.yml. Empty lists mean "install nothing".
+
+# ── System ────────────────────────────────────────────────────────────────────
+hostname: brisingamen
+
+# ── Fonts (fonts role) ────────────────────────────────────────────────────────
+# Explicit opt-in; keys of font_catalog. Empty list = install nothing.
+fonts_install_list:
+  - jetbrains_mono_nerd_font
+# Optional: register the COSMIC toolkit default monospace font.
+cosmic_mono_font_family: "JetBrainsMono Nerd Font"
+
+# ── COSMIC theme (cosmic_de role) ─────────────────────────────────────────────
+# Palette files live in assets/themes/<name>/. Wallpaper is relative to
+# assets/wallpapers/; an empty value skips the wallpaper.
+theme_name: catppuccin
+theme_flavour: mocha      # latte | frappe | macchiato | mocha
+theme_accent: rosewater   # see assets/themes/<theme>/accents.yml
+theme_wallpaper: brisingamen/train-sideview.png
+
+# ── Cosmic appearance preferences (cosmic_de role) ────────────────────────────
+# Frosted-glass surfaces enabled on top of the imported theme (the .ron only
+# carries is_frosted; per-surface flags are compiled-namespace config).
+cosmic_frosted_surfaces:
+  - windows
+  - panel
+  - applets
+  - maximized_apps
+  - system_interface
+
+# ── COSMIC shell layout (cosmic_shell role) ──────────────────────────────────
+# Panel/dock snapshot lives in assets/cosmic-shell/brisingamen/ (position,
+# size, applets, gaps). Refresh procedure: assets/cosmic-shell/README.md.
+
+# ── COSMIC terminal (cosmic_term role) ────────────────────────────────────────
+# cosmic_term_font_family / cosmic_term_font_size (role defaults shown below).
+# cosmic_term_font_family: "JetBrainsMono Nerd Font"
+# cosmic_term_font_size: 14
+
+# ── AI tools (ai_tools role) ──────────────────────────────────────────────────
+# Opt-in extras beyond ai_tools_catalog (see that role's defaults).
+ai_tools_extra:
+  - command_code_cli
+  - command_code_desktop
+
+# ── Zed (zed role) ────────────────────────────────────────────────────────────
+# Extension + UI theme names follow the host COSMIC theme automatically
+# (see zed_themes in roles/dev/zed/defaults). Optional extras:
+# zed_extensions: []   # zed_extension_catalog keys to install beyond the theme's
+# Editor fonts (role defaults shown below).
+# zed_ui_font_family: "JetBrainsMono Nerd Font"
+# zed_buffer_font_family: "JetBrainsMono Nerd Font Mono"
