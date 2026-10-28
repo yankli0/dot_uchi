@@ -19,25 +19,29 @@ jobs:
         run: pip install yamllint ansible ansible-lint pytest
 
       - name: Install Ansible collections
-        run: ansible-galaxy collection install -r requirements.yml
+        run: ansible-galaxy collection install -r ../ansible/requirements.yml
+        working-directory: src
 
       - name: YAML lint
-        run: yamllint assets inventory playbooks roles callback_plugins
+        run: yamllint assets inventory playbooks roles ../ansible
+        working-directory: src
 
       - name: Ansible lint
         run: ansible-lint
+        working-directory: src
 
       - name: Syntax check
         run: |
           ansible-playbook playbooks/brisingamen.yml --syntax-check
           ansible-playbook playbooks/gleipnir.yml --syntax-check
+        working-directory: src
 
       - name: Structural tests
         run: pytest -q tests/
 
   check-mode:
-    # Check-mode run on a Fedora container (COSMIC/GNOME-free parts are
-    # skipped by check mode; system packages resolve but nothing installs).
+    # Check-mode run on a Fedora container (desktop-bound parts are skipped
+    # by check mode or tags; system packages resolve but nothing installs).
     # Verifies the playbooks survive a real target environment.
     runs-on: ubuntu-latest
     container: fedora:latest
@@ -47,7 +51,9 @@ jobs:
       - name: Install tooling
         run: |
           dnf install -y ansible-core ansible-lint python3-pytest
-          ansible-galaxy collection install -r requirements.yml
+          ansible-galaxy collection install -r ../ansible/requirements.yml
+        working-directory: src
 
       - name: Check-mode run (zed role, user-level, no sudo needed)
         run: ansible-playbook playbooks/brisingamen.yml --tags zed --check --diff
+        working-directory: src
