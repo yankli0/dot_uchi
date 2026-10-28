@@ -1,0 +1,22 @@
+---
+# Git itself is installed by the system role, which every playbook runs first.
+
+- name: Validate Git identity variables
+  ansible.builtin.assert:
+    that:
+      - git_user_name | length > 0
+      - git_user_email | length > 0
+    fail_msg: >-
+      Set git_user_name and git_user_email in inventory/group_vars/all.yml
+      (or host_vars for a single host).
+
+- name: Configure global Git identity
+  community.general.git_config:
+    scope: global
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+  loop:
+    - {name: user.name, value: "{{ git_user_name }}"}
+    - {name: user.email, value: "{{ git_user_email }}"}
+    - {name: init.defaultBranch, value: "{{ git_default_branch }}"}
+  become: false

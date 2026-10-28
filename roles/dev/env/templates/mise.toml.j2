@@ -1,0 +1,5 @@
+# Ansible-managed development environment tools
+[tools]
+{% for name in env_selected_tools %}
+"{{ env_tools[name].tool }}" = "{{ env_tools[name].version }}"
+{% endfor %}

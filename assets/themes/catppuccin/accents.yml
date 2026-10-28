@@ -1,0 +1,26 @@
+# Catppuccin accent palette — reference only, not deployed by Ansible.
+# Source: https://catppuccin.com/palette
+# Used by roles/client/cosmic_de to validate host theme_accent values.
+# frosted: whether this theme ships frosted-glass surfaces (true here; the
+#   compiled-theme .ron files carry is_frosted: true).
+frosted: true
+# Compiled-theme file under cosmic/, per host flavour + accent.
+theme_ron_template: "catppuccin-{flavour}-{accent}+round.ron"
+accents:
+  rosewater: "#f5e0dc"
+  flamingo: "#f2cdcd"
+  pink: "#f5c2e7"
+  mauve: "#cba6f7"
+  red: "#f38ba8"
+  maroon: "#eba0ac"
+  peach: "#fab387"
+  yellow: "#f9e2af"
+  green: "#a6e3a1"
+  teal: "#94e2d5"
+  sky: "#89dceb"
+  sapphire: "#74c7ec"
+  blue: "#89b4fa"
+  lavender: "#b4befe"
+
+flavours: [latte, frappe, macchiato, mocha]
+light_flavours: [latte]

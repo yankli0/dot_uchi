@@ -1,0 +1,48 @@
+---
+- name: Create Starship directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - "{{ user_bin_dir }}"
+    - "{{ user_cache_dir }}"
+  become: false
+
+- name: Check Starship installation
+  ansible.builtin.stat:
+    path: "{{ starship_bin }}"
+  register: starship_binary
+
+- name: Install Starship
+  become: false
+  when: not starship_binary.stat.exists
+  block:
+    - name: Download Starship installer
+      ansible.builtin.get_url:
+        url: https://starship.rs/install.sh
+        dest: "{{ user_cache_dir }}/starship-install.sh"
+        mode: "0700"
+
+    - name: Run Starship installer
+      ansible.builtin.command:
+        argv:
+          - sh
+          - "{{ user_cache_dir }}/starship-install.sh"
+          - --yes
+          - --bin-dir
+          - "{{ user_bin_dir }}"
+        creates: "{{ starship_bin }}"
+      changed_when: true
+
+- name: Deploy Starship configuration
+  ansible.builtin.template:
+    src: starship.toml.j2
+    dest: "{{ starship_config }}"
+    mode: "0644"
+    backup: true
+  become: false
+
+# Fonts for the Powerline glyphs are installed by the fonts role
+# (opt-in via host vars) and registered as the COSMIC toolkit
+# monospace font there. Starship only needs its own config here.

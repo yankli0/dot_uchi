@@ -1,0 +1,19 @@
+---
+- name: Set hostname
+  ansible.builtin.hostname:
+    name: "{{ hostname }}"
+  become: true
+  when: hostname is defined
+
+- name: Install system prerequisites
+  ansible.builtin.package:
+    name: [git, curl, wget, ca-certificates, python3, unzip, libatomic]
+    state: present
+  become: true
+
+- name: Enable user lingering
+  ansible.builtin.command:
+    argv: [loginctl, enable-linger, "{{ ansible_user }}"]
+    creates: "/var/lib/systemd/linger/{{ ansible_user }}"
+  become: true
+  changed_when: true

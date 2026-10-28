@@ -1,0 +1,22 @@
+---
+- name: Install Flatpak
+  ansible.builtin.package:
+    name: flatpak
+    state: present
+  become: true
+
+- name: Add user Flathub remote
+  community.general.flatpak_remote:
+    name: flathub
+    state: present
+    method: user
+    flatpakrepo_url: https://flathub.org/repo/flathub.flatpakrepo
+
+# COSMIC ships its own software center (cosmic-store, Flatpak/GNOME appstore
+# frontend). Install it on COSMIC desktops so apps can be installed and
+# updated from the desktop UI. Verified on this system:
+# `cosmic-store` is an rpm from the Fedora repos.
+- name: Check for COSMIC desktop
+  ansible.builtin.stat:
+    path: /usr/bin/cosmic-settings
+  register: _flatpak_cosmic_desktop

@@ -1,3 +1,0 @@
-# gh
-
-- GitHub CLI (`gh`)

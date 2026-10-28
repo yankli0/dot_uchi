@@ -1,2 +1,7 @@
 archive/*
 homelab/
+.venv/
+.ansible/
+.commandcode/
+__pycache__/
+archive/

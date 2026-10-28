@@ -1,0 +1,136 @@
+---
+# Theme palette (theme_name/flavour/accent/wallpaper) is host configuration:
+# defined in inventory/host_vars/<host>.yml, not defaulted here.
+
+- name: Load theme palette for validation
+  ansible.builtin.include_vars:
+    file: "{{ assets_dir }}/themes/{{ theme_name }}/accents.yml"
+
+- name: Validate theme flavour
+  ansible.builtin.assert:
+    that: theme_flavour in flavours
+    fail_msg: "Unknown flavour '{{ theme_flavour }}'. Valid: {{ flavours | join(', ') }}"
+
+- name: Validate theme accent
+  ansible.builtin.assert:
+    that: theme_accent in (accents.keys() | list)
+    fail_msg: "Unknown accent '{{ theme_accent }}'. Valid: {{ accents.keys() | list | join(', ') }}"
+
+- name: Resolve theme file
+  ansible.builtin.set_fact:
+    _cosmic_de_ron_path: >-
+      {{ assets_dir }}/themes/{{ theme_name }}/cosmic/{{
+      theme_ron_template.format(flavour=theme_flavour, accent=theme_accent) }}
+
+# ── COSMIC theme ──────────────────────────────────────────────────────────────
+# Import through cosmic-settings: it builds the Theme config from the Builder
+# file and writes both, which is what the compositor actually reads. Writing the
+# Builder namespace alone has no visible effect.
+- name: Check for COSMIC Settings
+  ansible.builtin.stat:
+    path: /usr/bin/cosmic-settings
+  register: cosmic_de_settings_binary
+
+- name: Fail when COSMIC Settings is unavailable
+  ansible.builtin.assert:
+    that: ansible_check_mode or cosmic_de_settings_binary.stat.exists
+    fail_msg: "cosmic-settings is required to apply the COSMIC desktop theme"
+
+# `cosmic-settings appearance import` rewrites the whole compiled theme
+# namespace every call, even when nothing changed (which also churns the
+# frosted flags below). Gate it: only import when the source .ron changed
+# (checksumed) since the last import.
+- name: Read last imported theme checksum
+  ansible.builtin.slurp:
+    src: "{{ user_cache_dir }}/cosmic-theme-import.sha256"
+  register: _cosmic_de_last_import
+  failed_when: false
+  check_mode: false
+
+- name: Compute theme file checksum
+  ansible.builtin.set_fact:
+    _cosmic_de_theme_checksum: "{{ lookup('ansible.builtin.file', _cosmic_de_ron_path) | hash('sha256') }}"
+
+- name: Apply COSMIC theme
+  ansible.builtin.command:
+    argv:
+      - cosmic-settings
+      - appearance
+      - import
+      - "{{ _cosmic_de_ron_path }}"
+  when: >-
+    not ansible_check_mode
+    and (_cosmic_de_last_import.content | b64decode | default('')
+         | trim != _cosmic_de_theme_checksum)
+  changed_when: true
+
+- name: Record imported theme checksum
+  ansible.builtin.copy:
+    content: "{{ _cosmic_de_theme_checksum }}\n"
+    dest: "{{ user_cache_dir }}/cosmic-theme-import.sha256"
+    mode: "0644"
+  when: not ansible_check_mode
+
+# Frosted glass, deterministic both ways: `cosmic-settings import` does not
+# reliably reset is_frosted, and per-surface flags are outside the .ron schema.
+# A surface is frosted only when the theme is frosted (`frosted` in its
+# accents.yml) AND the host lists it in `cosmic_frosted_surfaces`.
+- name: Ensure compiled theme config directories exist
+  ansible.builtin.file:
+    path: "{{ user_config_dir }}/cosmic/com.system76.CosmicTheme.{{ item }}/v2"
+    state: directory
+    mode: "0755"
+  loop: [Dark, Dark.Builder]
+  become: false
+
+- name: Write frosted-glass flags from theme + host config
+  ansible.builtin.copy:
+    content: "{{ frosted_on | lower }}\n"
+    dest: "{{ user_config_dir }}/cosmic/com.system76.CosmicTheme.{{ item.0 }}/v2/{{ item.1 }}"
+    mode: "0644"
+  loop: "{{ ['Dark', 'Dark.Builder'] | product(frosted_flags) | list }}"
+  loop_control:
+    label: "{{ item.0 }}/{{ item.1 }}={{ frosted_on }}"
+  vars:
+    frosted_flags:
+      - is_frosted
+      - frosted_windows
+      - frosted_panel
+      - frosted_applets
+      - frosted_maximized_apps
+      - frosted_system_interface
+    frosted_on: >-
+      {{ frosted and (item.1 == 'is_frosted'
+         or item.1 | replace('frosted_', '') in (cosmic_frosted_surfaces | default([]))) }}
+  become: false
+
+# ── Wallpaper ─────────────────────────────────────────────────────────────────
+- name: Ensure user backgrounds directory exists
+  ansible.builtin.file:
+    path: "{{ user_home }}/.local/share/backgrounds"
+    state: directory
+    mode: "0755"
+  when: theme_wallpaper | length > 0
+
+- name: Copy wallpaper asset to user backgrounds directory
+  ansible.builtin.copy:
+    src: "{{ assets_dir }}/wallpapers/{{ theme_wallpaper }}"
+    dest: "{{ user_home }}/.local/share/backgrounds/{{ theme_wallpaper | basename }}"
+    mode: "0644"
+  when: theme_wallpaper | length > 0
+
+- name: Deploy wallpaper RON config
+  ansible.builtin.copy:
+    content: |
+      (
+          filter_by_theme: false,
+          filter_method: Lanczos,
+          output: "all",
+          rotation_frequency: 0,
+          sampling_method: Alphanumeric,
+          scaling_mode: Zoom,
+          source: Path("{{ user_home }}/.local/share/backgrounds/{{ theme_wallpaper | basename }}"),
+      )
+    dest: "{{ user_config_dir }}/cosmic/com.system76.CosmicBackground/v1/all"
+    mode: "0644"
+  when: theme_wallpaper | length > 0

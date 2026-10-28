@@ -1,0 +1,5 @@
+---
+# Identity is supplied from inventory (group_vars/all.yml or host_vars/<host>.yml).
+git_user_name: ""
+git_user_email: ""
+git_default_branch: main

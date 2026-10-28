@@ -1,0 +1,160 @@
+---
+# Theme and extension configuration derives from host config:
+# theme_name/theme_flavour (host_vars) resolve a theme in zed_themes, whose
+# catalog extensions install automatically; hosts can add zed_extensions,
+# unselected entries are removed.
+- name: Check if Zed is installed
+  ansible.builtin.command:
+    argv: [sh, -c, "command -v zed"]
+  register: zed_check
+  changed_when: false
+  failed_when: zed_check.rc not in [0, 1, 127]
+  check_mode: false
+  environment:
+    PATH: "{{ user_path }}"
+
+- name: Install Zed at the pinned release
+  ansible.builtin.shell: "set -o pipefail; curl -fsSL {{ zed_install_url }} | sh"
+  args:
+    executable: /bin/bash
+  environment:
+    PATH: "{{ user_path }}"
+    ZED_VERSION: "{{ zed_install_version }}"
+  when: zed_check.rc != 0
+  changed_when: true
+
+- name: Require a theme mapping for the host theme
+  ansible.builtin.assert:
+    that: theme_name in zed_themes
+    fail_msg: >-
+      '{{ theme_name }}' has no entry in zed_themes (roles/dev/zed/defaults);
+      add modes/names plus catalog extensions for it.
+
+- name: Validate host extension selection
+  ansible.builtin.assert:
+    that: zed_extensions | difference(zed_extension_catalog.keys() | list) | length == 0
+    fail_msg: "Unknown zed extension ids: {{ zed_extensions | difference(zed_extension_catalog.keys() | list) }}"
+
+- name: Validate theme asset support for the host accent
+  ansible.builtin.assert:
+    that: theme_accent in (zed_themes[theme_name].asset.checksums | default({}))
+    fail_msg: >-
+      No pinned checksum for accent '{{ theme_accent }}' under
+      zed_themes.{{ theme_name }}.asset.checksums; pin the release JSON.
+  when: zed_themes[theme_name].asset is defined
+
+- name: Resolve selected extension set for the theme
+  ansible.builtin.set_fact:
+    _zed_extensions_selected: "{{ (zed_themes[theme_name].extensions | default([])) | union(zed_extensions) }}"
+    _zed_theme_asset: "{{ zed_themes[theme_name].asset | default(none) }}"
+
+- name: Resolve final Zed theme and icon names
+  ansible.builtin.set_fact:
+    _zed_theme:
+      mode: "{{ zed_themes[theme_name].modes[theme_flavour] }}"
+      name: "{{ zed_theme_names[theme_flavour] ~ zed_theme_suffix }}"
+      light: "{{ zed_theme_names[zed_light_flavour] ~ zed_theme_suffix }}"
+      icons: "{{ zed_themes[theme_name].icon_names | default(none) }}"
+  vars:
+    zed_theme_names: >-
+      {{ zed_themes[theme_name].asset.flavour_names | default(zed_themes[theme_name].names) }}
+    zed_light_flavour: >-
+      {{ zed_themes[theme_name].modes | dict2items
+         | selectattr('value', 'equalto', 'light') | map(attribute='key') | first }}
+    zed_theme_suffix: >-
+      {{ ''
+         if (zed_themes[theme_name].asset | default({})).default_accent | default(theme_accent) == theme_accent
+         else ' (' ~ theme_accent ~ ')' }}
+
+- name: Ensure Zed config, cache, and extension directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - "{{ user_config_dir }}/zed"
+    - "{{ user_home }}/.local/share/zed/extensions/installed"
+    - "{{ user_cache_dir }}/zed-extensions"
+  become: false
+
+- name: Ensure extension directories for the selected extensions exist
+  ansible.builtin.file:
+    path: "{{ user_home }}/.local/share/zed/extensions/installed/{{ item }}"
+    state: directory
+    mode: "0755"
+  loop: "{{ _zed_extensions_selected }}"
+  loop_control:
+    label: "{{ item }}"
+  become: false
+
+- name: Fetch selected extension archives (checksum-pinned)
+  ansible.builtin.get_url:
+    url: "{{ zed_extension_catalog[item].url }}"
+    dest: "{{ user_cache_dir }}/zed-extensions/{{ zed_extension_catalog[item].dir }}.tar.gz"
+    checksum: "{{ zed_extension_catalog[item].checksum }}"
+    mode: "0600"
+  loop: "{{ _zed_extensions_selected }}"
+  loop_control:
+    label: "{{ item }}"
+  # get_url cannot validate a checksum against a dest dir that check mode
+  # never materializes.
+  when: not ansible_check_mode
+  become: false
+
+- name: Install selected Zed extensions
+  ansible.builtin.unarchive:
+    src: "{{ user_cache_dir }}/zed-extensions/{{ zed_extension_catalog[item].dir }}.tar.gz"
+    dest: "{{ user_home }}/.local/share/zed/extensions/installed/{{ item }}"
+    remote_src: true
+    extra_opts:
+      - --strip-components=1
+    creates: "{{ user_home }}/.local/share/zed/extensions/installed/{{ item }}/extension.toml"
+  loop: "{{ _zed_extensions_selected }}"
+  loop_control:
+    label: "{{ item }}"
+  when: not ansible_check_mode
+  become: false
+
+- name: Remove unselected Zed extensions
+  ansible.builtin.file:
+    path: "{{ user_home }}/.local/share/zed/extensions/installed/{{ item.key }}"
+    state: absent
+  loop: "{{ zed_extension_catalog | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+  when: item.key not in _zed_extensions_selected
+  become: false
+
+- name: Remove the previously sourced catppuccin theme extension
+  ansible.builtin.file:
+    path: "{{ user_home }}/.local/share/zed/extensions/installed/catppuccin"
+    state: absent
+  become: false
+
+# Per-accent themes: the official release JSON registers the accented theme
+# names resolved into settings above (source-compiled catppuccin extension
+# does not load from a manual copy).
+- name: Ensure the Zed user themes directory exists
+  ansible.builtin.file:
+    path: "{{ user_config_dir }}/zed/themes"
+    state: directory
+    mode: "0755"
+  become: false
+
+- name: Install the accented host theme JSON (checksum-pinned)
+  ansible.builtin.get_url:
+    url: "{{ _zed_theme_asset.url | replace('{accent}', theme_accent) }}"
+    checksum: "{{ _zed_theme_asset.checksums[theme_accent] }}"
+    dest: "{{ user_config_dir }}/zed/themes/catppuccin-{{ theme_accent }}.json"
+    mode: "0644"
+  when:
+    - _zed_theme_asset is not none
+    - not ansible_check_mode
+  become: false
+
+- name: Deploy Zed settings from host configuration
+  ansible.builtin.template:
+    src: settings.json.j2
+    dest: "{{ user_config_dir }}/zed/settings.json"
+    mode: "0644"
+  become: false

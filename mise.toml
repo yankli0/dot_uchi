@@ -1,0 +1,7 @@
+# Development tools for working in this repository.
+[tools]
+node       = "latest"
+deno       = "latest"
+"npm:yarn" = "latest"
+lazygit    = "latest"
+gh         = "latest"

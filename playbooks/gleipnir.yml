@@ -1,0 +1,117 @@
+---
+- name: Configure gleipnir
+  hosts: gleipnir
+  pre_tasks:
+    - name: Validate required host configuration
+      ansible.builtin.assert:
+        that: varname is defined and varname is not none and varname | length > 0
+        fail_msg: "Required host var '{{ varname }}' is missing/empty for {{ inventory_hostname }}."
+        quiet: true
+      loop: [hostname, theme_name, theme_flavour, theme_accent, theme_wallpaper]
+      loop_control:
+        loop_var: varname
+      tags: always
+  tasks:
+    # ── System base (elevated) ──────────────────────────────────────────────────
+    - name: Configure system base
+      become: true
+      tags: [system, base]
+      block:
+        - name: Apply system settings
+          ansible.builtin.import_role:
+            name: system
+
+        - name: Configure Zsh shell
+          ansible.builtin.import_role:
+            name: zsh
+
+        - name: Configure Tailscale
+          ansible.builtin.import_role:
+            name: tailscale
+
+        - name: Install and enable Syncthing
+          ansible.builtin.import_role:
+            name: syncthing
+          tags: [sync]
+
+    # ── User environment, apps, theme, and dev workspace ───────────────────────
+    - name: Configure user environment and workspace
+      become: false
+      tags: [user]
+      block:
+        - name: Install mise CLI
+          ansible.builtin.import_role:
+            name: mise
+          tags: [mise]
+
+        - name: Install fonts
+          ansible.builtin.import_role:
+            name: fonts
+          tags: [fonts]
+
+        - name: Configure Git identity
+          ansible.builtin.import_role:
+            name: git
+          tags: [git]
+
+        - name: Configure Starship prompt
+          ansible.builtin.import_role:
+            name: starship
+          tags: [starship]
+
+
+        - name: Set up Podman containers
+          ansible.builtin.import_role:
+            name: podman
+          tags: [containers, podman]
+
+        - name: Optional local AI runtime (never run by default)
+          ansible.builtin.import_role:
+            name: ollama
+          tags: [ai, ollama, never]
+
+
+        - name: Install client applications
+          ansible.builtin.import_role:
+            name: apps
+          tags: [apps]
+
+        - name: Configure COSMIC desktop
+          ansible.builtin.import_role:
+            name: cosmic_de
+          tags: [cosmic]
+
+        - name: Configure COSMIC shell layout
+          ansible.builtin.import_role:
+            name: cosmic_shell
+          tags: [cosmic]
+
+        - name: Configure COSMIC Terminal
+          ansible.builtin.import_role:
+            name: cosmic_term
+          tags: [cosmic]
+
+        - name: Configure development workspace
+          ansible.builtin.import_role:
+            name: env
+          tags: [dev]
+
+        - name: Install AI development tools
+          ansible.builtin.import_role:
+            name: ai_tools
+          tags: [dev, ai]
+
+        - name: Install terminal dev tools
+          ansible.builtin.import_role:
+            name: terminal_tools
+          tags: [dev, terminal_tools]
+
+        - name: Install Zed editor
+          ansible.builtin.import_role:
+            name: zed
+          tags: [dev, editors, zed]
+
+        - name: Install Visual Studio Code
+          ansible.builtin.import_role:
+            name: vscode
+          tags: [dev, editors, vscode]

@@ -1,5 +1,10 @@
 ---
-skip_list:
-  - command-instead-of-module
-  - no-changed-when
-  - no-handler
+# No global lint skips. Add per-task noqa comments only when a rule cannot be
+# satisfied with an available Ansible module or idiom.
+skip_list: []
+
+# Directories excluded from discovery entirely (legacy graveyard, tooling).
+exclude_paths:
+  - archive/
+  - .venv/
+  - .ansible/

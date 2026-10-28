@@ -1,0 +1,32 @@
+---
+# AI tools are installed from their upstream curl installers. `bin` is the
+# installer's output path and doubles as the idempotency marker.
+ai_tools_catalog:
+  claude-code:
+    url: https://claude.ai/install.sh
+    shell: bash
+    bin: "{{ user_bin_dir }}/claude"
+  opencode:
+    url: https://opencode.ai/install
+    shell: bash
+    bin: "{{ user_home }}/.opencode/bin/opencode"
+  pi:
+    url: https://pi.dev/install.sh
+    shell: sh
+    bin: "{{ user_bin_dir }}/pi"
+  unsloth:
+    url: https://unsloth.ai/install.sh
+    shell: sh
+    bin: "{{ user_bin_dir }}/unsloth"
+
+# Opt-in per host: list the ai_tools_catalog keys (and ai_tools_extra
+# entries, e.g. command_code_cli) to install. Empty installs none.
+ai_tools_selected: []
+
+# Extra AI tools outside the installer catalog; explicit opt-in per host:
+#   ai_tools_extra:
+#     - command_code_cli      # Command Code CLI (npm global via mise node)
+#     - command_code_desktop  # Command Code Desktop (AppImage from GitHub releases)
+ai_tools_extra: []
+
+ai_tools_path: "{{ user_bin_dir }}:{{ user_home }}/.opencode/bin:{{ ansible_facts['env']['PATH'] }}"
