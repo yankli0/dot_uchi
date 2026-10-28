@@ -58,6 +58,46 @@
           ansible.builtin.import_role:
             name: starship
           tags: [starship]
+        - name: Configure tmux sessions
+          ansible.builtin.import_role:
+            name: tmux
+          tags: [tmux, terminal_tools]
+
+        - name: Restore shared Vim configuration
+          ansible.builtin.import_role:
+            name: vim
+          tags: [editors, vim]
+
+        - name: Configure Neovim as the dev editor
+          ansible.builtin.import_role:
+            name: neovim
+          tags: [dev, editors, neovim]
+
+        - name: Set up Podman containers
+          ansible.builtin.import_role:
+            name: podman
+          tags: [containers, podman]
+
+        - name: Optional local AI runtime (never run by default)
+          ansible.builtin.import_role:
+            name: ollama
+          tags: [ai, ollama, never]
+
+        - name: Optional SSH key generation (never run by default)
+          ansible.builtin.import_role:
+            name: ssh
+          tags: [ssh, never]
+
+        - name: Optional password CLI (never run by default)
+          ansible.builtin.import_role:
+            name: passwords
+          tags: [passwords, never]
+
+        - name: Optional canonical core directory (never run by default)
+          ansible.builtin.import_role:
+            name: core
+          tags: [core, never]
+
 
         - name: Install client applications
           ansible.builtin.import_role:
@@ -88,6 +128,11 @@
           ansible.builtin.import_role:
             name: ai_tools
           tags: [dev, ai]
+
+        - name: Install terminal dev tools
+          ansible.builtin.import_role:
+            name: terminal_tools
+          tags: [dev, terminal_tools]
 
         - name: Install Zed editor
           ansible.builtin.import_role:

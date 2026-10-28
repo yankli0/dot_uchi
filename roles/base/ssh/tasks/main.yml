@@ -1,0 +1,73 @@
+---
+- name: Inspect optional SSH key
+  ansible.builtin.stat:
+    path: "{{ ssh_key_path }}"
+  register: ssh_existing_key
+  when: ssh_generate_key | bool
+
+- name: Generate only a missing explicitly requested key
+  when:
+    - ssh_generate_key | bool
+    - not ssh_existing_key.stat.exists
+  block:
+    - name: Install SSH key generator
+      ansible.builtin.package:
+        name: openssh-clients
+        state: present
+      become: true
+      tags: [packages]
+
+    - name: Create private key directory
+      ansible.builtin.file:
+        path: "{{ ssh_key_path | dirname }}"
+        state: directory
+        mode: "0700"
+
+    - name: Ask for SSH passphrase
+      ansible.builtin.pause:
+        prompt: "New SSH passphrase (empty requires ssh_key_passphrase='' explicitly)"
+        echo: false
+      register: ssh_passphrase_prompt
+      when: ssh_key_passphrase is not defined
+      no_log: true
+
+    - name: Require an explicit secret or nonempty prompted passphrase
+      ansible.builtin.assert:
+        that:
+          - ssh_key_passphrase is defined or ssh_passphrase_prompt.user_input | default('') | length > 0
+        fail_msg: Supply ssh_key_passphrase securely; an empty value must be explicit.
+      no_log: true
+
+    - name: Generate Ed25519 key without replacing existing keys
+      ansible.builtin.command:
+        argv:
+          - ssh-keygen
+          - -t
+          - ed25519
+          - -C
+          - "{{ ssh_key_comment }}"
+          - -f
+          - "{{ ssh_key_path }}"
+          - -N
+          - "{{ ssh_key_passphrase | default(ssh_passphrase_prompt.user_input | default('')) }}"
+        creates: "{{ ssh_key_path }}"
+      changed_when: true
+      no_log: true
+
+- name: Read public key for enrollment
+  ansible.builtin.slurp:
+    src: "{{ ssh_key_path }}.pub"
+  register: ssh_public_key
+  when:
+    - ssh_generate_key | bool
+    - not ansible_check_mode
+
+- name: Report public key and manual registration
+  ansible.builtin.debug:
+    msg: >-
+      {{ ssh_public_key.content | b64decode | trim }}
+      Register this public key at https://github.com/settings/keys or your SSH service.
+      Keep the private key local.
+  when:
+    - ssh_generate_key | bool
+    - not ansible_check_mode
