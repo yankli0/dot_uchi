@@ -11,16 +11,17 @@ import yaml
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-PLAYBOOKS = ROOT / "playbooks"
-ROLES = ROOT / "roles"
+SRC = ROOT / "src"
+PLAYBOOKS = SRC / "playbooks"
+ROLES = SRC / "roles"
 LEAF_DIRS = (
     ROLES / "base",
     ROLES / "client",
     ROLES / "cosmic",
     ROLES / "dev",
 )
-ASSETS = ROOT / "assets"
-HOST_VARS = ROOT / "inventory" / "host_vars"
+ASSETS = SRC / "assets"
+HOST_VARS = SRC / "inventory" / "host_vars"
 
 ROLE_NAME_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
 
@@ -64,7 +65,7 @@ def test_playbooks_import_existing_roles():
 
 def test_group_vars_selection_lists_are_known_subsets():
     apps_catalog = _load_yaml(ROLES / "client/apps/vars/main.yml")["apps_catalog"]
-    client_apps = _load_yaml(ROOT / "inventory/group_vars/client.yml")["client_apps"]
+    client_apps = _load_yaml(SRC / "inventory/group_vars/client.yml")["client_apps"]
     unknown = set(client_apps) - set(apps_catalog)
     assert not unknown, f"client_apps references unknown ids: {unknown}"
 

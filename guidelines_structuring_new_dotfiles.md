@@ -9,21 +9,28 @@ laptops, identical role set, per-host theming).
 ## 1. Repository layout
 
 ```text
-inventory/
-  hosts.yml            # host list (client group)
-  group_vars/all.yml   # connection, derived paths, git identity, assets_dir
-  group_vars/client.yml# shared app selection (client_apps)
-  host_vars/<host>.yml # per-host config — CANONICAL documentation of all knobs
-playbooks/
-  <host>.yml           # per-host entry point; same task body per client
-roles/
-  base/                # host-agnostic foundations (system, zsh, mise, git, fonts, starship, tailscale, syncthing)
-  client/              # generic client apps (apps, flatpak)
-  cosmic/              # COSMIC desktop (cosmic_de, cosmic_term, cosmic_shell)
-  dev/                 # development workspace (env, ai_tools, zed)
-assets/
-  themes/<name>/       # palettes (accents.yml) + cosmic .ron files
-  wallpapers/<host>/   # per-host wallpapers
+src/
+  ansible.cfg          # run ansible from here
+  inventory/
+    hosts.yml            # host list (client group)
+    group_vars/all.yml   # connection, derived paths, git identity, assets_dir
+    group_vars/client.yml# shared app selection (client_apps)
+    host_vars/<host>.yml # per-host config — CANONICAL documentation of all knobs
+  playbooks/
+    <host>.yml           # per-host entry point; same task body per client
+  roles/
+    base/                # host-agnostic foundations (system, zsh, mise, git, fonts, starship, tailscale, syncthing)
+    client/              # generic client apps (apps, flatpak)
+    cosmic/              # COSMIC desktop (cosmic_de, cosmic_term, cosmic_shell)
+    dev/                 # development workspace (env, terminal_tools, ai_tools, zed, vscode)
+  assets/
+    themes/<name>/       # palettes (accents.yml) + cosmic .ron files
+    wallpapers/<host>/   # per-host wallpapers
+ansible/                 # Ansible machinery that is not applied to machines
+  callback_plugins/      # stdout renderer (role_tree)
+  requirements.yml       # collections
+tests/                   # repo validation (pytest), CI-adjacent
+.github/workflows/ci.yml # yamllint, ansible-lint, syntax, pytest, container check-mode
 ```
 
 Import roles by leaf name (`import_role: name: fonts`) — `ansible.cfg`
