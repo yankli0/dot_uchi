@@ -1,0 +1,17 @@
+# Gruvbox accent palette — reference only
+# frosted: whether this theme ships frosted-glass surfaces (false here; the
+#   compiled-theme .ron file carries is_frosted: false and square corners).
+frosted: false
+# Compiled-theme file under cosmic/, per host accent (flavour is single).
+theme_ron_template: "dark-{accent}.ron"
+accents:
+  red: "#fb4934"
+  orange: "#fe8019"
+  yellow: "#fabd2f"
+  green: "#b8bb26"
+  aqua: "#8ec07c"
+  blue: "#83a598"
+  purple: "#d3869b"
+
+flavours: [dark, light]
+light_flavours: [light]
