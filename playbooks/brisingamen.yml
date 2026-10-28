@@ -58,15 +58,7 @@
           ansible.builtin.import_role:
             name: starship
           tags: [starship]
-        - name: Configure tmux sessions
-          ansible.builtin.import_role:
-            name: tmux
-          tags: [tmux, terminal_tools]
 
-        - name: Restore shared Vim configuration
-          ansible.builtin.import_role:
-            name: vim
-          tags: [editors, vim]
 
         - name: Configure Neovim as the dev editor
           ansible.builtin.import_role:
@@ -82,21 +74,6 @@
           ansible.builtin.import_role:
             name: ollama
           tags: [ai, ollama, never]
-
-        - name: Optional SSH key generation (never run by default)
-          ansible.builtin.import_role:
-            name: ssh
-          tags: [ssh, never]
-
-        - name: Optional password CLI (never run by default)
-          ansible.builtin.import_role:
-            name: passwords
-          tags: [passwords, never]
-
-        - name: Optional canonical core directory (never run by default)
-          ansible.builtin.import_role:
-            name: core
-          tags: [core, never]
 
 
         - name: Install client applications

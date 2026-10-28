@@ -10,8 +10,6 @@ terminal_tools_packages:
   - eza
   - zoxide
   - fastfetch
-  - tmux
-  - vim
 
 # Tools via mise; narrow or pin per host, e.g.
 #   terminal_tools_mise:
