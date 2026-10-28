@@ -33,7 +33,7 @@
 
 - name: Fail when COSMIC Settings is unavailable
   ansible.builtin.assert:
-    that: cosmic_de_settings_binary.stat.exists
+    that: ansible_check_mode or cosmic_de_settings_binary.stat.exists
     fail_msg: "cosmic-settings is required to apply the COSMIC desktop theme"
 
 # `cosmic-settings appearance import` rewrites the whole compiled theme
