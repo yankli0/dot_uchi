@@ -18,7 +18,3 @@
     state: present
     method: user
   when: _apps_selected | selectattr('type', 'equalto', 'flatpak') | list | length > 0
-
-- name: Install Visual Studio Code natively
-  ansible.builtin.include_tasks: vscode.yml
-  when: "'vscode' in client_apps"

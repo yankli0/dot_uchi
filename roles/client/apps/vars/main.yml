@@ -7,4 +7,3 @@ apps_catalog:
   discord: {type: flatpak, id: com.discordapp.Discord, group: communication}
   telegram: {type: flatpak, id: org.telegram.desktop, group: communication}
   obsidian: {type: flatpak, id: md.obsidian.Obsidian, group: productivity}
-  vscode: {type: native, id: code, group: editor}

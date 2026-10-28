@@ -49,5 +49,5 @@ jobs:
           dnf install -y ansible-core ansible-lint python3-pytest
           ansible-galaxy collection install -r requirements.yml
 
-      - name: Check-mode run (- cosmic tasks only, no sudo needed)
-        run: ansible-playbook playbooks/brisingamen.yml --tags cosmic,editors --check --diff
+      - name: Check-mode run (user-level roles only, no sudo needed)
+        run: ansible-playbook playbooks/brisingamen.yml --tags cosmic,zed --check --diff

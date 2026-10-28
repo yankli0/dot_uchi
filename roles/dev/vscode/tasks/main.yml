@@ -19,7 +19,7 @@
   become: true
 
 - name: Install Visual Studio Code
-  ansible.builtin.dnf:
-    name: code
+  ansible.builtin.package:
+    name: "{{ vscode_packages }}"
     state: present
   become: true

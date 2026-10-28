@@ -60,11 +60,6 @@
           tags: [starship]
 
 
-        - name: Configure Neovim as the dev editor
-          ansible.builtin.import_role:
-            name: neovim
-          tags: [dev, editors, neovim]
-
         - name: Set up Podman containers
           ansible.builtin.import_role:
             name: podman
@@ -114,4 +109,9 @@
         - name: Install Zed editor
           ansible.builtin.import_role:
             name: zed
-          tags: [dev, editors]
+          tags: [dev, editors, zed]
+
+        - name: Install Visual Studio Code
+          ansible.builtin.import_role:
+            name: vscode
+          tags: [dev, editors, vscode]

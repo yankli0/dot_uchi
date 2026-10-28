@@ -1,0 +1,5 @@
+---
+# Visual Studio Code, installed from the Microsoft repo (matching how Zed
+# is a standalone editors role).
+vscode_packages:
+  - code
