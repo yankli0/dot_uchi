@@ -4,6 +4,7 @@ name: ci
   push:
     branches: [uchi]
   pull_request:
+  workflow_dispatch:
 
 jobs:
   validate:
