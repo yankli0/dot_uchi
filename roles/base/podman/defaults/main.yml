@@ -1,5 +1,0 @@
----
-podman_packages:
-  - podman
-  - podman-compose
-  - toolbox

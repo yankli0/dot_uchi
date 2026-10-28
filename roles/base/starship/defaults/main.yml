@@ -1,0 +1,3 @@
+---
+starship_bin: "{{ user_bin_dir }}/starship"
+starship_config: "{{ user_config_dir }}/starship.toml"

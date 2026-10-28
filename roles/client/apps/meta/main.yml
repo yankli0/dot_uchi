@@ -1,3 +1,4 @@
 ---
+# Flatpak is a hard prerequisite: the flatpak task set cannot work without it.
 dependencies:
-  - role: base/system
+  - role: flatpak

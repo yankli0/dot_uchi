@@ -1,0 +1,57 @@
+---
+zed_install_url: https://zed.dev/install.sh
+# Pinned release (installer honours ZED_VERSION); bump deliberately.
+zed_install_version: "v1.25.3"
+
+# Extension catalog installable from source, pinned by tag + checksum.
+# A theme's `extensions` list (zed_themes below) is installed automatically;
+# additional entries per host via zed_extensions. Unselected entries are
+# removed. `dir` is the archive's top-level directory for that release.
+zed_extension_catalog:
+  catppuccin:
+    url: https://github.com/catppuccin/zed/archive/refs/tags/v0.2.27.tar.gz
+    checksum: sha256:77cd147b16b901d683d6d6f208beee366d76c5ec859cc31d193ed8eb390499b0
+    dir: catppuccin-zed-0.2.27
+  catppuccin-icons:
+    url: https://github.com/catppuccin/zed-icons/archive/refs/tags/v1.24.0.tar.gz
+    checksum: sha256:e3f1a11f8d3e899e1f25d162b9367f476788e077aa4c6a5c054f1bd790eaf982
+    dir: catppuccin-zed-icons-1.24.0
+
+zed_extensions: []
+
+# Zed UI mapping per COSMIC theme (theme_name in host_vars):
+#   extensions: catalog ids installed for this theme (built-in themes: [])
+#   modes:      flavour -> light|dark
+#   names:      flavour -> Zed theme name
+#   icon_names: optional flavour -> Zed icon theme name; omit for themes
+#               without an icon extension (Zed keeps its default icons)
+zed_themes:
+  catppuccin:
+    extensions: [catppuccin, catppuccin-icons]
+    modes:
+      latte: light
+      frappe: dark
+      macchiato: dark
+      mocha: dark
+    names:
+      latte: "Catppuccin Latte"
+      frappe: "Catppuccin Frappé"
+      macchiato: "Catppuccin Macchiato"
+      mocha: "Catppuccin Mocha"
+    icon_names:
+      latte: "Catppuccin Latte"
+      frappe: "Catppuccin Frappé"
+      macchiato: "Catppuccin Macchiato"
+      mocha: "Catppuccin Mocha"
+  gruvbox:
+    extensions: []            # Gruvbox themes are Zed built-ins
+    modes:
+      dark: dark
+      light: light
+    names:
+      dark: "Gruvbox Dark"
+      light: "Gruvbox Light"
+
+# Editor fonts (overridable per host).
+zed_ui_font_family: "JetBrainsMono Nerd Font"
+zed_buffer_font_family: "JetBrainsMono Nerd Font Mono"

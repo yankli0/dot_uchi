@@ -1,31 +1,31 @@
 ---
-- name: Gather service facts
-  ansible.builtin.service_facts:
+- name: Check if Tailscale is installed
+  ansible.builtin.command:
+    argv: [sh, -c, "command -v tailscale"]
+  register: tailscale_check
+  changed_when: false
+  failed_when: tailscale_check.rc not in [0, 1, 127]
+  check_mode: false
+  environment:
+    PATH: "{{ user_path }}"
 
-- name: Setup tailscale
-  block:
-    - name: Check if tailscale is installed
-      ansible.builtin.command:
-        argv:
-          - sh
-          - -c
-          - "command -v tailscale"
-      register: tailscale_check
-      changed_when: false
-      failed_when: tailscale_check.rc not in [0, 1, 127]
-      check_mode: false
-      environment:
-        PATH: "{{ ansible_facts['env']['HOME'] }}/.local/bin:{{ ansible_facts['env']['PATH'] }}"
+- name: Install Tailscale
+  ansible.builtin.shell: "set -o pipefail; curl -fsSL {{ tailscale_install_url }} | sh"
+  args:
+    executable: /bin/bash
+  become: true
+  when: tailscale_check.rc != 0
+  changed_when: true
 
-    - name: Install tailscale
-      ansible.builtin.shell: "set -o pipefail; curl -fsSL {{ tailscale_install_url }} | sh"
-      args:
-        executable: /bin/bash
-      become: true
-      when: tailscale_check.rc != 0
-      changed_when: true
+- name: Check if firewalld is running
+  ansible.builtin.command:
+    argv: [systemctl, is-active, --quiet, firewalld]
+  register: _tailscale_firewalld_active
+  changed_when: false
+  failed_when: false
+  check_mode: false
 
-- name: Trust Tailscale traffic through firewalld
+- name: Trust Tailscale interface through firewalld
   ansible.posix.firewalld:
     zone: trusted
     interface: tailscale0
@@ -33,7 +33,4 @@
     permanent: true
     immediate: true
   become: true
-  when:
-    - ansible_facts.services is defined
-    - "'firewalld.service' in ansible_facts.services"
-    - ansible_facts.services['firewalld.service'].state == 'running'
+  when: _tailscale_firewalld_active.rc == 0

@@ -1,8 +1,8 @@
 # git
 
-- Shared Git settings preserve unrelated global configuration.
-- Select with `git` or `dev`; installs Git independently.
-- Supply `git_user_name`, `git_user_email`, and optional `git_editor` (default Vim).
-- Existing identity fills missing inputs; only missing values prompt.
-- Unattended runs fail clearly if identity is still missing.
-- Enrollment: `gh auth login` is separate; no ports.
+- Applies the global Git identity for the login user (`~/.gitconfig`).
+- Values come from inventory: `git_user_name`, `git_user_email`, and optional
+  `git_default_branch` (default `main`).
+- Set them in `inventory/group_vars/all.yml`, or override per machine in
+  `inventory/host_vars/<host>.yml`.
+- Requires `git` from `base/system`; no services or ports.

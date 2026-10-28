@@ -1,65 +1,22 @@
 ---
-- name: Install Git
-  ansible.builtin.package:
-    name: git
-    state: present
-  become: true
-  tags: [packages]
+# Git itself is installed by the system role, which every playbook runs first.
 
-- name: Read existing Git identity
-  ansible.builtin.command:
-    argv: [git, config, --global, --get, "{{ item }}"]
-  loop: [user.name, user.email]
-  register: git_existing
-  changed_when: false
-  failed_when: git_existing.rc not in [0, 1]
-  check_mode: false
-
-- name: Resolve supplied or existing Git identity
-  ansible.builtin.set_fact:
-    git_resolved_name: "{{ git_user_name | default(git_existing.results[0].stdout, true) }}"
-    git_resolved_email: "{{ git_user_email | default(git_existing.results[1].stdout, true) }}"
-
-- name: Ask for missing Git name
-  ansible.builtin.pause:
-    prompt: Git user name (unattended runs must supply git_user_name)
-  register: git_name_prompt
-  when: git_resolved_name | trim | length == 0
-
-- name: Ask for missing Git email
-  ansible.builtin.pause:
-    prompt: Git email (unattended runs must supply git_user_email)
-  register: git_email_prompt
-  when: git_resolved_email | trim | length == 0
-
-- name: Resolve prompted identity
-  ansible.builtin.set_fact:
-    git_resolved_name: "{{ git_resolved_name or git_name_prompt.user_input | default('') }}"
-    git_resolved_email: "{{ git_resolved_email or git_email_prompt.user_input | default('') }}"
-
-- name: Require Git identity
+- name: Validate Git identity variables
   ansible.builtin.assert:
     that:
-      - git_resolved_name | trim | length > 0
-      - git_resolved_email | trim | length > 0
-    fail_msg: Supply git_user_name and git_user_email for unattended Git configuration.
+      - git_user_name | length > 0
+      - git_user_email | length > 0
+    fail_msg: >-
+      Set git_user_name and git_user_email in inventory/group_vars/all.yml
+      (or host_vars for a single host).
 
-- name: Write managed Git settings while preserving other settings
+- name: Configure global Git identity
   community.general.git_config:
     scope: global
-    name: "{{ item.key }}"
+    name: "{{ item.name }}"
     value: "{{ item.value }}"
   loop:
-    - {key: user.name, value: "{{ git_resolved_name }}"}
-    - {key: user.email, value: "{{ git_resolved_email }}"}
-    - {key: core.editor, value: "{{ git_editor }}"}
-    - {key: init.defaultBranch, value: main}
-    - {key: alias.st, value: status}
-    - {key: alias.co, value: checkout}
-    - {key: alias.br, value: branch}
-    - {key: alias.ci, value: commit}
-    - {key: alias.unstage, value: "reset HEAD --"}
-    - {key: alias.last, value: "log -1 HEAD"}
-    - {key: alias.visual, value: "log --graph --oneline --decorate --all"}
-    - {key: pull.rebase, value: "false"}
-    - {key: push.default, value: simple}
+    - {name: user.name, value: "{{ git_user_name }}"}
+    - {name: user.email, value: "{{ git_user_email }}"}
+    - {name: init.defaultBranch, value: "{{ git_default_branch }}"}
+  become: false

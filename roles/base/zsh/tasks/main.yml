@@ -5,19 +5,13 @@
     state: present
   become: true
 
-- name: Create shell configuration and installer directories
-  ansible.builtin.file:
-    path: "{{ ansible_facts['env']['HOME'] }}/{{ item }}"
-    state: directory
-    mode: "0755"
-  loop: [.config, .local/bin, .cache/dot-uchi]
-
-- name: Copy shared Zsh configuration
+- name: Deploy shared Zsh configuration
   ansible.builtin.copy:
     src: .zshrc
-    dest: "{{ ansible_facts['env']['HOME'] }}/.zshrc"
+    dest: "{{ user_home }}/.zshrc"
     mode: "0644"
     backup: true
+  become: false
 
 - name: Set Zsh as login shell
   ansible.builtin.user:

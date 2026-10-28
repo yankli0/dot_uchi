@@ -1,0 +1,57 @@
+---
+- name: Ensure development workspace directory exists
+  ansible.builtin.file:
+    path: "{{ env_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Deploy dev workspace mise configuration
+  ansible.builtin.template:
+    src: mise.toml.j2
+    dest: "{{ env_dir }}/mise.toml"
+    mode: "0644"
+
+- name: Check mise installation
+  ansible.builtin.stat:
+    path: "{{ user_bin_dir }}/mise"
+  register: _env_mise_bin
+
+- name: Trust dev workspace mise configuration
+  ansible.builtin.command:
+    argv: ["{{ user_bin_dir }}/mise", "trust", "{{ env_dir }}/mise.toml"]
+  when:
+    - not ansible_check_mode
+    - env_mise_bin.stat.exists | default(false)
+  changed_when: false
+
+- name: Plan dev environment tool installation
+  ansible.builtin.command:
+    argv: "{{ [user_bin_dir ~ '/mise', 'install', '--dry-run-code'] + env_tool_specs }}"
+    chdir: "{{ env_dir }}"
+  register: _env_tool_plan
+  changed_when: false
+  failed_when: _env_tool_plan.rc not in [0, 1]
+  when:
+    - not ansible_check_mode
+    - env_mise_bin.stat.exists | default(false)
+
+- name: Install dev environment tools
+  ansible.builtin.command:
+    argv: "{{ [user_bin_dir ~ '/mise', 'install'] + env_tool_specs }}"
+    chdir: "{{ env_dir }}"
+  register: _env_tool_install
+  when:
+    - not ansible_check_mode
+    - env_mise_bin.stat.exists | default(false)
+    - _env_tool_plan.rc | default(0) == 1
+  changed_when: true
+
+- name: Build mise shims for dev workspace
+  ansible.builtin.command:
+    argv: ["{{ user_bin_dir }}/mise", "reshim"]
+    chdir: "{{ env_dir }}"
+  when:
+    - not ansible_check_mode
+    - env_mise_bin.stat.exists | default(false)
+    - _env_tool_install.changed | default(false)
+  changed_when: false

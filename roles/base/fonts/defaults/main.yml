@@ -1,0 +1,13 @@
+---
+# Font registry — single source of truth for fonts in this repo.
+# Selection is explicit: hosts list keys in `fonts_install_list`
+# (host_vars); an empty list installs nothing.
+fonts_catalog:
+  jetbrains_mono_nerd_font:
+    family: "JetBrainsMono Nerd Font"
+    url: "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.5.1/JetBrainsMono.tar.xz"
+    archive: "JetBrainsMono.tar.xz"
+    checksum: "sha256:04d5e8f903693f9dd13e16f867e994834e681eb3c72c0d337a770dcda09010cf"
+    dir: "JetBrainsMonoNerdFont"
+    marker: "JetBrainsMonoNerdFont-Regular.ttf"
+fonts_install_list: []

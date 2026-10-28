@@ -1,0 +1,10 @@
+---
+# Application registry. Hosts/group_vars select entries via `client_apps`
+# (host vars); an empty list installs nothing. `type` selects the installer
+# task set (flatpak | native), `group` is free-text metadata.
+apps_catalog:
+  zen: {type: flatpak, id: app.zen_browser.zen, group: browser}
+  discord: {type: flatpak, id: com.discordapp.Discord, group: communication}
+  telegram: {type: flatpak, id: org.telegram.desktop, group: communication}
+  obsidian: {type: flatpak, id: md.obsidian.Obsidian, group: productivity}
+  vscode: {type: native, id: code, group: editor}

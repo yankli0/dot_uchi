@@ -1,6 +1,1 @@
----
-app_catalog:
-  chrome:  {type: flatpak, id: com.google.Chrome,         group: browser}
-  zen:     {type: flatpak, id: app.zen_browser.zen,       group: browser}
-  discord: {type: flatpak, id: com.discordapp.Discord,    group: communication}
-  slack:   {type: flatpak, id: com.slack.Slack,           group: communication}
+main.yml

@@ -1,4 +1,0 @@
----
-dependencies:
-  - role: base/system
-  - role: base/tailscale

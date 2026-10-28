@@ -1,0 +1,4 @@
+---
+# Per-host overrides go in inventory/host_vars/<host>.yml.
+cosmic_term_font_family: "JetBrainsMono Nerd Font"
+cosmic_term_font_size: 14
