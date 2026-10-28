@@ -1,5 +1,0 @@
----
-- name: Install communication apps
-  ansible.builtin.include_tasks: install.yml
-  vars:
-    client_apps: "{{ app_catalog | dict2items | selectattr('value.group','equalto','communication') | map(attribute='key') | list }}"
