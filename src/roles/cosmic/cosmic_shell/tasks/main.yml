@@ -21,4 +21,6 @@
     dest: "{{ user_config_dir }}/cosmic/"
     mode: preserve
   become: false
-  notify: Restart cosmic-panel
+  notify:
+    - Check whether the COSMIC panel process is running
+    - Restart cosmic-panel
