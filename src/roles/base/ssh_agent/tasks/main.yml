@@ -1,0 +1,182 @@
+---
+# Point the user session at an SSH agent. Empty ssh_agent = GNOME Keyring
+# default (ships with Fedora, socket-activated); a set ssh_agent id deploys
+# that provider's unit from templates/<ssh_agent>.service.j2.
+- name: Check for a supported SSH agent
+  ansible.builtin.assert:
+    that: ssh_agent in ["", "pass-cli"]
+    fail_msg: >-
+      ssh_agent must be empty (GNOME Keyring default) or a provider id with
+      a templates/<id>.service.j2 unit, got '{{ ssh_agent }}'.
+    quiet: true
+
+- name: Check that the provider has a unit template
+  ansible.builtin.assert:
+    that: >-
+      lookup('ansible.builtin.fileglob',
+             role_path ~ '/templates/' ~ ssh_agent ~ '.service.j2',
+             errors='ignore') | length > 0
+    fail_msg: >-
+      No unit template for provider '{{ ssh_agent }}' — add
+      templates/{{ ssh_agent }}.service.j2 to this role.
+    quiet: true
+  when: ssh_agent | length > 0
+
+- name: Resolve SSH agent paths for GNOME Keyring
+  ansible.builtin.set_fact:
+    _ssh_agent_socket: "{{ user_xdg_runtime }}/keyring/ssh"
+    _ssh_agent_service: gnome-keyring-daemon.service
+    _ssh_agent_enable: gnome-keyring-daemon.socket
+    _ssh_agent_env_d: "{{ user_config_dir }}/environment.d/ssh-agent.conf"
+  when: ssh_agent | length == 0
+
+- name: Resolve SSH agent paths for the provider agent
+  ansible.builtin.set_fact:
+    _ssh_agent_socket: "{{ user_home }}/.ssh/{{ ssh_agent }}-agent.sock"
+    _ssh_agent_service: "{{ ssh_agent }}-ssh-agent.service"
+    _ssh_agent_enable: "{{ ssh_agent }}-ssh-agent.service"
+    _ssh_agent_env_d: "{{ user_config_dir }}/environment.d/{{ ssh_agent }}-agent.conf"
+    _ssh_agent_exec: "{{ user_bin_dir }}/{{ ssh_agent }}"
+  when: ssh_agent | length > 0
+
+- name: Ensure systemd user unit directory exists
+  ansible.builtin.file:
+    path: "{{ user_config_dir }}/systemd/user"
+    state: directory
+    mode: "0755"
+  become: false
+
+- name: Ensure the environment.d directory exists
+  ansible.builtin.file:
+    path: "{{ user_config_dir }}/environment.d"
+    state: directory
+    mode: "0755"
+  become: false
+
+# environment.d is read by the systemd user session: every process started
+# inside the session, shells included, inherits SSH_AUTH_SOCK.
+- name: Route SSH_AUTH_SOCK to the agent for the user session
+  ansible.builtin.template:
+    src: agent.env.j2
+    dest: "{{ _ssh_agent_env_d }}"
+    mode: "0644"
+  become: false
+
+- name: Remove the inactive provider session drop-in
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ user_config_dir }}/environment.d/pass-cli-agent.conf"
+    - "{{ user_config_dir }}/environment.d/ssh-agent.conf"
+    - "{{ user_config_dir }}/environment.d/proton-pass-agent.conf"
+  when: item != _ssh_agent_env_d
+  become: false
+
+# The distro unit ships pkcs11,secrets only; the override adds ssh so the
+# socket-activated daemon also serves SSH keys.
+- name: Ensure GNOME Keyring unit override directory exists
+  ansible.builtin.file:
+    path: "{{ user_config_dir }}/systemd/user/gnome-keyring-daemon.service.d"
+    state: directory
+    mode: "0755"
+  become: false
+  when: ssh_agent | length == 0
+
+- name: Enable the GNOME Keyring SSH component
+  ansible.builtin.template:
+    src: gnome-keyring-ssh.conf.j2
+    dest: "{{ user_config_dir }}/systemd/user/gnome-keyring-daemon.service.d/ssh.conf"
+    mode: "0644"
+  become: false
+  notify: Restart the SSH agent service
+  when: ssh_agent | length == 0
+
+- name: Remove stale GNOME Keyring SSH override
+  ansible.builtin.file:
+    path: "{{ user_config_dir }}/systemd/user/gnome-keyring-daemon.service.d/ssh.conf"
+    state: absent
+  become: false
+  when: ssh_agent | length > 0
+
+# Deleting a unit file does not stop a running daemon: stop and disable the
+# legacy units first so only one provider serves keys.
+- name: Stop and disable stale provider SSH agent units
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    scope: user
+    state: stopped
+    enabled: false
+  loop:
+    - proton-pass-ssh-agent.service
+  become: false
+  when: ssh_agent | length > 0 and item != _ssh_agent_service
+  failed_when: false
+
+- name: Remove stale provider SSH agent unit
+  ansible.builtin.file:
+    path: "{{ user_config_dir }}/systemd/user/{{ item }}"
+    state: absent
+  loop:
+    - pass-cli-ssh-agent.service
+    - proton-pass-ssh-agent.service
+  become: false
+  when:
+    - ssh_agent | length == 0 or item != _ssh_agent_service
+
+# PAM (pam_gnome_keyring auto_start in greetd) launches the keyring daemon
+# with --login at every login and exports its SSH socket into the session —
+# after environment.d, so it would always win. When a provider agent is
+# active, mask its SSH autostart entry so the provider owns SSH_AUTH_SOCK.
+- name: Ensure user autostart directory exists
+  ansible.builtin.file:
+    path: "{{ user_config_dir }}/autostart"
+    state: directory
+    mode: "0755"
+  become: false
+  when: ssh_agent | length > 0
+
+- name: Mask GNOME Keyring SSH autostart while a provider agent serves keys
+  ansible.builtin.copy:
+    dest: "{{ user_config_dir }}/autostart/gnome-keyring-ssh.desktop"
+    mode: "0644"
+    content: |
+      [Desktop Entry]
+      Hidden=true
+  become: false
+  when: ssh_agent | length > 0
+
+- name: Restore GNOME Keyring SSH autostart for the default agent
+  ansible.builtin.file:
+    path: "{{ user_config_dir }}/autostart/gnome-keyring-ssh.desktop"
+    state: absent
+  become: false
+  when: ssh_agent | length == 0
+
+- name: Deploy the provider SSH agent user unit
+  ansible.builtin.template:
+    src: "{{ ssh_agent }}.service.j2"
+    dest: "{{ user_config_dir }}/systemd/user/{{ _ssh_agent_service }}"
+    mode: "0644"
+  become: false
+  notify: Restart the SSH agent service
+  when: ssh_agent | length > 0
+
+- name: Enable and start the SSH agent
+  ansible.builtin.systemd:
+    name: "{{ _ssh_agent_enable }}"
+    scope: user
+    enabled: true
+    state: started
+    daemon_reload: true
+  become: false
+
+# environment.d only applies at login, but the user manager picks up the new
+# socket for everything it spawns from here on — no logout required.
+# Already-running shells re-export it from the managed .zshrc snippet.
+- name: Point the running user session at the agent socket
+  ansible.builtin.command:
+    argv: [systemctl, --user, set-environment, "SSH_AUTH_SOCK={{ _ssh_agent_socket }}"]
+  become: false
+  changed_when: true
+  check_mode: false

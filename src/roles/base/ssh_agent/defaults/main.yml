@@ -1,0 +1,13 @@
+---
+# SSH agent wiring. Empty means the GNOME Keyring default: ships with Fedora,
+# needs no extra daemon — the role only enables its SSH component and points
+# the session at its socket. Set ssh_agent to a provider id (e.g. "pass-cli")
+# to serve keys from that provider's agent instead; adding a provider is one
+# unit template in templates/<ssh_agent>.service.j2, no role logic change.
+ssh_agent: ""  # noqa: var-naming[no-role-prefix] — host-facing selector, named for the role it configures
+
+# Vault scope for provider agents (only used when ssh_agent is set).
+ssh_agent_vault: Dotfiles
+
+# GNOME Keyring options (only used when ssh_agent is empty).
+ssh_agent_keyring_exec: /usr/bin/gnome-keyring-daemon

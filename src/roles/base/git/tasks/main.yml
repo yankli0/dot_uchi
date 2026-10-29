@@ -7,7 +7,7 @@
       - git_user_name | length > 0
       - git_user_email | length > 0
     fail_msg: >-
-      Set git_user_name and git_user_email in inventory/group_vars/all.yml
+      Set git_user_name and git_user_email in inventory/group_vars/all/vars.yml
       (or host_vars for a single host).
 
 - name: Configure global Git identity

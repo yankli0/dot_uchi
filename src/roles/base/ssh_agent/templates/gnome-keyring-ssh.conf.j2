@@ -1,0 +1,6 @@
+# Managed by dotfiles (base/ssh_agent). The distro unit ships pkcs11,secrets
+# only; clear ExecStart and re-add the ssh component so the socket-activated
+# daemon also serves SSH keys.
+[Service]
+ExecStart=
+ExecStart={{ ssh_agent_keyring_exec }} --foreground --components=pkcs11,secrets,ssh --control-directory=%t/keyring

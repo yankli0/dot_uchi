@@ -1,0 +1,13 @@
+[Unit]
+# Serve SSH keys from the pass-cli vault "{{ ssh_agent_vault }}"; one vault by design.
+Description=pass-cli SSH agent (vault: {{ ssh_agent_vault }})
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart={{ _ssh_agent_exec }} ssh-agent start --vault-name {{ ssh_agent_vault }} --socket-path {{ _ssh_agent_socket }}
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target
