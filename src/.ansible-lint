@@ -3,8 +3,10 @@
 # satisfied with an available Ansible module or idiom.
 skip_list: []
 
-# Directories excluded from discovery entirely (legacy graveyard, tooling).
+# Vaulted cache: noqa comments do not survive encryption, and name linting of
+# sealed blobs is meaningless; pytest checks its structure.
 exclude_paths:
   - archive/
   - .venv/
   - .ansible/
+  - inventory/group_vars/all/vault.yml

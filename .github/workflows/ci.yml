@@ -2,7 +2,7 @@
 name: ci
 "on":
   push:
-    branches: [uchi]
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
@@ -24,7 +24,7 @@ jobs:
         working-directory: src
 
       - name: YAML lint
-        run: yamllint assets inventory playbooks roles ../ansible
+        run: yamllint assets inventory roles site.yml ../ansible ../chezmoi
         working-directory: src
 
       - name: Ansible lint
@@ -32,9 +32,7 @@ jobs:
         working-directory: src
 
       - name: Syntax check
-        run: |
-          ansible-playbook playbooks/brisingamen.yml --syntax-check
-          ansible-playbook playbooks/gleipnir.yml --syntax-check
+        run: ansible-playbook site.yml --syntax-check
         working-directory: src
 
       - name: Structural tests
@@ -56,5 +54,5 @@ jobs:
         working-directory: src
 
       - name: Check-mode run (zed role, user-level, no sudo needed)
-        run: ansible-playbook playbooks/brisingamen.yml --tags zed --check --diff
+        run: ansible-playbook site.yml --tags editors --check --diff
         working-directory: src

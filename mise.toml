@@ -1,7 +1,71 @@
-# Development tools for working in this repository.
+# Development tools and entry-point tasks for working in this repository.
+# `mise run` with no task name opens the selector; secrets are fetched from
+# Proton Pass (scripts/sync-secrets.sh) before any apply.
 [tools]
+python     = "3.13"
 node       = "latest"
 deno       = "latest"
 "npm:yarn" = "latest"
 lazygit    = "latest"
 gh         = "latest"
+
+# Use the repo venv (created by install.sh; holds ansible + linters).
+[env]
+_.python.venv = { path = ".venv", create = true }
+
+# ── Secrets (Proton Pass → encrypted cache) ──────────────────────────────────
+[tasks.fetch-secrets]
+description = "Build the encrypted secrets cache from Proton Pass if missing"
+run         = "bash scripts/sync-secrets.sh"
+
+[tasks.refresh-secrets]
+description = "Rebuild (overwrite) the encrypted secrets cache from Proton Pass"
+run         = "bash scripts/sync-secrets.sh --refresh"
+
+# ── SSH agent (GNOME Keyring default, pass-cli opt-in per host) ───────────────
+[tasks.ssh-agent]
+description = "Check the SSH agent the host points at (keyring socket or pass-cli)"
+usage       = 'arg "[action]" default="status"'
+run         = 'bash scripts/ssh-agent.sh ${usage_action}'
+
+# ── Ansible runs (host auto-resolved: arg > remembered > hostname) ──────────
+[tasks.use]
+description = "Remember this machine for apply/check, e.g. mise run use gleipnir"
+usage       = 'arg "<host>"'
+run         = 'bash scripts/use-host.sh resolve ${usage_host} >/dev/null'
+
+[tasks.host]
+description = "Show which host apply/check would target"
+hide        = true
+run         = 'bash scripts/use-host.sh resolve'
+
+[tasks.forget-host]
+description = "Forget the remembered host (fall back to hostname)"
+run         = 'bash scripts/use-host.sh forget'
+
+[tasks.check]
+description = "Dry run on this machine: show what would change, touch nothing"
+usage       = 'arg "[host]" default="auto"'
+run         = 'cd src && ansible-playbook site.yml -i inventory/hosts.yml -l $(bash ../scripts/use-host.sh resolve ${usage_host}) --check --diff'
+
+[tasks.list-hosts]
+description = "Print provisioned hosts, one per line (helper)"
+hide        = true
+run         = 'cd src && ansible-inventory -i inventory/hosts.yml --list | python3 -c "import json,sys; print(chr(10).join(sorted(json.load(sys.stdin)[\"client\"][\"hosts\"])))"'
+
+[tasks.apply-to]
+description = "Apply to one machine and remember it, e.g. mise run apply-to gleipnir"
+usage       = 'arg "[host]" default="auto"'
+depends     = ["fetch-secrets"]
+run         = 'cd src && ansible-playbook site.yml -i inventory/hosts.yml -l $(bash ../scripts/use-host.sh resolve ${usage_host}) --ask-become-pass'
+
+[tasks.apply]
+description = "Apply to all machines (fetches secrets first, prompts for sudo)"
+depends     = ["fetch-secrets"]
+run         = '''
+#!/usr/bin/env bash
+set -euo pipefail
+for host in $(mise run list-hosts); do
+    mise run apply-to "$host"
+done
+'''

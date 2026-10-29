@@ -7,18 +7,23 @@ that the roles rely on and run in CI.
 from __future__ import annotations
 
 import re
+import subprocess
 import yaml
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 PLAYBOOKS = SRC / "playbooks"
+SITE = SRC / "site.yml"
 ROLES = SRC / "roles"
+GROUP_VARS = SRC / "inventory" / "group_vars"
+ALL_VARS = GROUP_VARS / "all"
 LEAF_DIRS = (
     ROLES / "base",
     ROLES / "client",
     ROLES / "cosmic",
     ROLES / "dev",
+    ROLES / "generic",
 )
 ASSETS = SRC / "assets"
 HOST_VARS = SRC / "inventory" / "host_vars"
@@ -32,7 +37,7 @@ def _load_yaml(path: Path):
 
 def _referenced_roles() -> set[str]:
     roles = set()
-    for playbook in PLAYBOOKS.glob("*.yml"):
+    for playbook in list(PLAYBOOKS.glob("*.yml")) + ([SITE] if SITE.is_file() else []):
         text = playbook.read_text()
         for match in re.finditer(r"name:\s*([a-z_0-9]+)\s*$", text, re.MULTILINE):
             roles.add(match.group(1))
@@ -42,6 +47,8 @@ def _referenced_roles() -> set[str]:
 def _existing_role_names() -> set[str]:
     roles = set()
     for leaf in LEAF_DIRS:
+        if not leaf.is_dir():
+            continue
         for child in leaf.iterdir():
             if child.is_dir():
                 roles.add(child.name)
@@ -49,7 +56,42 @@ def _existing_role_names() -> set[str]:
 
 
 def _host_vars(name: str) -> dict:
-    return _load_yaml(HOST_VARS / f"{name}.yml")
+    return _load_yaml(HOST_VARS / name / "vars.yml")
+
+
+def _host_dir() -> list[Path]:
+    """Per-host subdirectories of inventory/host_vars/."""
+    return sorted(d for d in HOST_VARS.iterdir() if d.is_dir())
+
+
+def test_secrets_manifest_and_cache_setup():
+    """Proton Pass flow: secrets.list drives the generated encrypted cache."""
+    manifest = ROOT / "secrets.list"
+    assert manifest.is_file(), "secrets.list (the secrets manifest) must exist"
+    refs = 0
+    for line in manifest.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        var, _, ref = line.partition(" ")
+        ref = ref.strip()
+        assert var.isupper(), f"secret var must be UPPER_SNAKE_CASE: {var}"
+        # Ref names may contain spaces (e.g. field "API Key"); separate by '/'.
+        assert len(ref.split("/")) == 3 and all(ref.split("/")), (
+            f"ref must be <vault>/<item>/<field>: {ref!r}"
+        )
+        refs += 1
+    assert refs > 0, "secrets.list defines no secrets"
+
+    cache = SRC / "inventory/group_vars/all/vault.yml"
+    if cache.is_file():
+        assert cache.read_text().startswith("$ANSIBLE_VAULT;"), (
+            "cache must be ansible-vault encrypted ($ANSIBLE_VAULT header)"
+        )
+        ignored = subprocess.run(
+            ["git", "check-ignore", "-q", str(cache)], cwd=ROOT
+        )
+        assert ignored.returncode == 0, "the secrets cache must be gitignored"
 
 
 def test_roles_use_valid_names():
@@ -64,26 +106,30 @@ def test_playbooks_import_existing_roles():
 
 
 def test_group_vars_selection_lists_are_known_subsets():
-    apps_catalog = _load_yaml(ROLES / "client/apps/vars/main.yml")["apps_catalog"]
+    apps_catalog = _load_yaml(ALL_VARS / "ai.yml")["apps_catalog"]
     client_apps = _load_yaml(SRC / "inventory/group_vars/client.yml")["client_apps"]
     unknown = set(client_apps) - set(apps_catalog)
     assert not unknown, f"client_apps references unknown ids: {unknown}"
 
-    font_catalog = _load_yaml(ROLES / "base/fonts/defaults/main.yml")["fonts_catalog"]
-    zed_catalog = _load_yaml(ROLES / "dev/zed/defaults/main.yml")["zed_extension_catalog"]
+    font_catalog = _load_yaml(ALL_VARS / "ai.yml")["fonts_catalog"]
+    zed_catalog = _load_yaml(ALL_VARS / "editors.yml")["zed_extension_catalog"]
 
-    for host in HOST_VARS.glob("*.yml"):
-        data = _load_yaml(host)
+    for host_dir in _host_dir():
+        data = _host_vars(host_dir.name)
         assert set(data.get("fonts_install_list", [])) <= set(font_catalog), (
-            f"{host.name}: fonts_install_list references unknown fonts"
+            f"{host_dir.name}: fonts_install_list references unknown fonts"
         )
         assert set(data.get("zed_extensions", [])) <= set(zed_catalog), (
-            f"{host.name}: zed_extensions references unknown extensions"
+            f"{host_dir.name}: zed_extensions references unknown extensions"
         )
         assert set(data.get("ai_tools_extra", [])) <= {
             "command_code_cli",
             "command_code_desktop",
-        }, f"{host.name}: ai_tools_extra has unknown entries"
+        }, f"{host_dir.name}: ai_tools_extra has unknown entries"
+        assert data.get("ssh_agent", "") in {
+            "",
+            "pass-cli",
+        }, f"{host_dir.name}: ssh_agent must be empty (Keyring) or a provider id"
 
 
 def _theme_file_pattern(theme: str) -> str:
@@ -92,8 +138,8 @@ def _theme_file_pattern(theme: str) -> str:
 
 
 def test_host_theme_files_exist():
-    for host in HOST_VARS.glob("*.yml"):
-        data = _load_yaml(host)
+    for host_dir in _host_dir():
+        data = _host_vars(host_dir.name)
         template = _theme_file_pattern(data["theme_name"])
         ron = ASSETS / "themes" / data["theme_name"] / "cosmic" / template.format(
             flavour=data["theme_flavour"], accent=data["theme_accent"]
@@ -121,8 +167,8 @@ def test_every_theme_accent_has_a_ron_file():
 
 
 def test_theme_ron_core_fields_present():
-    for host in HOST_VARS.glob("*.yml"):
-        data = _load_yaml(host)
+    for host_dir in _host_dir():
+        data = _host_vars(host_dir.name)
         template = _theme_file_pattern(data["theme_name"])
         ron = ASSETS / "themes" / data["theme_name"] / "cosmic" / template.format(
             flavour=data["theme_flavour"], accent=data["theme_accent"]
@@ -135,17 +181,18 @@ def test_theme_ron_core_fields_present():
 def test_every_provisioned_url_catalog_has_https_entries():
     # Fonts and AI tool installers must reference real URLs for the checksummed
     # download pipeline.
-    fonts = _load_yaml(ROLES / "base/fonts/defaults/main.yml")["fonts_catalog"]
+    tools = _load_yaml(ALL_VARS / "ai.yml")
+    fonts = tools["fonts_catalog"]
     for _font_key, spec in fonts.items():
         assert spec["url"].startswith("https://")
         assert spec["checksum"].startswith("sha256:")
 
-    ai_tools = _load_yaml(ROLES / "dev/ai_tools/defaults/main.yml")["ai_tools_catalog"]
+    ai_tools = tools["ai_tools_catalog"]
     for _tool_key, spec in ai_tools.items():
         assert spec["url"].startswith("https://")
         assert spec["bin"]
 
-    zed_meta = _load_yaml(ROLES / "dev/zed/defaults/main.yml")
+    zed_meta = _load_yaml(ALL_VARS / "editors.yml")
     catalog = zed_meta["zed_extension_catalog"]
     for _key, spec in catalog.items():
         assert spec["url"].startswith("https://")
