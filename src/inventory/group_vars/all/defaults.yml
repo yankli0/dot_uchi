@@ -32,4 +32,4 @@ ssh_agent_keyring_exec: /usr/bin/gnome-keyring-daemon
 cosmic_term_font_family: "JetBrainsMono Nerd Font"
 cosmic_term_font_size: 14
 
-chezmoi_source_dir: "{{ playbook_dir | dirname }}/../chezmoi"
+chezmoi_source_dir: "{{ playbook_dir }}/../chezmoi"
