@@ -8,6 +8,7 @@ deno       = "latest"
 "npm:yarn" = "latest"
 lazygit    = "latest"
 gh         = "latest"
+chezmoi    = "latest"
 
 # Use the repo venv (created by install.sh; holds ansible + linters).
 [env]

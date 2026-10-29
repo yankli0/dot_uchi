@@ -66,13 +66,14 @@
 
         - name: Check chezmoi installation
           ansible.builtin.stat:
-            path: "{{ user_bin_dir }}/chezmoi"
+            path: "{{ user_home }}/.local/share/mise/shims/chezmoi"
           register: _chezmoi_bin
           tags: [dotfiles]
 
         - name: Install chezmoi via mise
           ansible.builtin.command:
             argv: [mise, install, chezmoi]
+            chdir: "{{ playbook_dir }}/.."
           when: not _chezmoi_bin.stat.exists
           changed_when: true
           environment:
@@ -81,7 +82,7 @@
 
         - name: Apply chezmoi dotfiles
           ansible.builtin.command:
-            argv: ["{{ user_bin_dir }}/chezmoi", apply, --force, --source, "{{ chezmoi_source_dir }}"]
+            argv: ["{{ user_home }}/.local/share/mise/shims/chezmoi", apply, --force, --source, "{{ chezmoi_source_dir }}"]
           register: _chezmoi_apply
           changed_when: true
           failed_when: _chezmoi_apply.rc != 0
