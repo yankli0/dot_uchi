@@ -1,0 +1,35 @@
+---
+# Shared tool defaults — mise paths, workspace, prompt, COSMIC terminal.
+mise_bin: "{{ user_bin_dir }}/mise"
+mise_config_dir: "{{ user_config_dir }}/mise"
+mise_global_tools:
+  node: {tool: node, version: latest}
+mise_env_secrets: {}
+
+env_dir: "{{ user_home }}/.mise"
+env_tools:
+  node: {tool: node, version: latest}
+  deno: {tool: deno, version: latest}
+  go: {tool: go, version: latest}
+  python: {tool: python, version: latest}
+  rust: {tool: rust, version: latest}
+env_selected_tools: "{{ env_tools.keys() | list }}"
+env_tool_specs: >-
+  {{ env_selected_tools
+     | zip(env_selected_tools | map('extract', env_tools) | map(attribute='version'))
+     | map('join', '@')
+     | list }}
+
+starship_bin: "{{ user_bin_dir }}/starship"
+starship_config: "{{ user_config_dir }}/starship.toml"
+
+tailscale_install_url: https://tailscale.com/install.sh
+ollama_install_url: https://ollama.com/install.sh
+ssh_agent: ""
+ssh_agent_vault: Dotfiles
+ssh_agent_keyring_exec: /usr/bin/gnome-keyring-daemon
+
+cosmic_term_font_family: "JetBrainsMono Nerd Font"
+cosmic_term_font_size: 14
+
+chezmoi_source_dir: "{{ playbook_dir | dirname }}/../chezmoi"

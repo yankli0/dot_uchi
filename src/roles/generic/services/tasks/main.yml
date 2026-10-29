@@ -1,0 +1,20 @@
+---
+# Lingering plus user-scope units (syncthing, podman socket).
+- name: Enable user lingering
+  ansible.builtin.command:
+    argv: [loginctl, enable-linger, "{{ ansible_user }}"]
+    creates: "/var/lib/systemd/linger/{{ ansible_user }}"
+  become: true
+  changed_when: true
+
+- name: Enable user-scope services
+  ansible.builtin.systemd_service:
+    name: "{{ item }}"
+    scope: user
+    enabled: true
+    state: started
+  loop: "{{ services_user }}"
+  become: false
+  when: services_user | length > 0
+  environment:
+    XDG_RUNTIME_DIR: "{{ user_xdg_runtime }}"

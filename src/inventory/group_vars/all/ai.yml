@@ -1,0 +1,44 @@
+---
+# Tool catalogs — AI CLIs, terminal CLIs, workspace tools, fonts, client apps.
+# Selection stays explicit in host_vars/group_vars; empty list = install nothing.
+ai_tools_catalog:
+  claude-code:
+    url: https://claude.ai/install.sh
+    shell: bash
+    bin: "{{ user_bin_dir }}/claude"
+  opencode:
+    url: https://opencode.ai/install
+    shell: bash
+    bin: "{{ user_home }}/.opencode/bin/opencode"
+  pi:
+    url: https://pi.dev/install.sh
+    shell: sh
+    bin: "{{ user_bin_dir }}/pi"
+  unsloth:
+    url: https://unsloth.ai/install.sh
+    shell: sh
+    bin: "{{ user_bin_dir }}/unsloth"
+ai_tools_selected: []
+ai_tools_extra: []
+ai_tools_path: "{{ user_bin_dir }}:{{ user_home }}/.opencode/bin:{{ ansible_facts['env']['PATH'] }}"
+
+terminal_tools_mise:
+  lazygit: {tool: lazygit, version: latest}
+  gh: {tool: gh, version: latest}
+  lazydocker: {tool: lazydocker, version: latest}
+
+fonts_catalog:
+  jetbrains_mono_nerd_font:
+    family: "JetBrainsMono Nerd Font"
+    url: "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.5.1/JetBrainsMono.tar.xz"
+    archive: "JetBrainsMono.tar.xz"
+    checksum: "sha256:04d5e8f903693f9dd13e16f867e994834e681eb3c72c0d337a770dcda09010cf"
+    dir: "JetBrainsMonoNerdFont"
+    marker: "JetBrainsMonoNerdFont-Regular.ttf"
+fonts_install_list: []
+
+apps_catalog:
+  zen: {type: flatpak, id: app.zen_browser.zen, group: browser}
+  discord: {type: flatpak, id: com.discordapp.Discord, group: communication}
+  telegram: {type: flatpak, id: org.telegram.desktop, group: communication}
+  obsidian: {type: flatpak, id: md.obsidian.Obsidian, group: productivity}

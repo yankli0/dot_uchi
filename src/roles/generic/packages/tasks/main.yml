@@ -1,0 +1,8 @@
+---
+# One dnf call for every packages_* list (system role owns the base set).
+- name: Install section packages
+  ansible.builtin.package:
+    name: "{{ packages_system + packages_shell + packages_env + packages_apps + packages_services }}"
+    state: present
+  become: true
+  when: (packages_system + packages_shell + packages_env + packages_apps + packages_services) | length > 0

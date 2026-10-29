@@ -1,0 +1,15 @@
+# Ansible-managed global mise tools
+[tools]
+{% for name, spec in mise_global_tools.items() %}
+"{{ spec.tool }}" = "{{ spec.version }}"
+{% endfor %}
+{% if mise_env_secrets | default({}) %}
+
+# Secrets from the host vault (KEY=value). Empty values are skipped.
+[env]
+{% for key, value in (mise_env_secrets | default({})).items() %}
+{% if value | string | length > 0 %}
+{{ key }} = "{{ value }}"
+{% endif %}
+{% endfor %}
+{% endif %}

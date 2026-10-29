@@ -1,0 +1,486 @@
+---
+# Imperative setup: installers, theme import, extensions, shell activation.
+- name: Check Starship installation
+  ansible.builtin.stat:
+    path: "{{ starship_bin }}"
+  register: _commands_starship
+  become: false
+
+- name: Install Starship
+  when: not _commands_starship.stat.exists
+  block:
+    - name: Download Starship installer
+      ansible.builtin.get_url:
+        url: https://starship.rs/install.sh
+        dest: "{{ user_cache_dir }}/starship-install.sh"
+        mode: "0700"
+
+    - name: Run Starship installer
+      ansible.builtin.command:
+        argv: [sh, "{{ user_cache_dir }}/starship-install.sh", --yes, --bin-dir, "{{ user_bin_dir }}"]
+        creates: "{{ starship_bin }}"
+      changed_when: true
+
+- name: Check mise installation
+  ansible.builtin.stat:
+    path: "{{ user_bin_dir }}/mise"
+  register: _commands_mise
+  become: false
+
+- name: Install mise
+  when: not _commands_mise.stat.exists
+  block:
+    - name: Download mise installer
+      ansible.builtin.get_url:
+        url: https://mise.run
+        dest: "{{ user_cache_dir }}/mise-install.sh"
+        mode: "0700"
+
+    - name: Run mise installer
+      ansible.builtin.command:
+        argv: [sh, "{{ user_cache_dir }}/mise-install.sh"]
+        creates: "{{ user_bin_dir }}/mise"
+      changed_when: true
+      environment:
+        MISE_INSTALL_PATH: "{{ user_bin_dir }}/mise"
+
+- name: Activate mise in Bash
+  ansible.builtin.blockinfile:
+    path: "{{ user_home }}/.bashrc"
+    create: true
+    mode: "0644"
+    marker: "# {mark} ANSIBLE MANAGED BLOCK: mise activation"
+    block: |
+      export PATH="$HOME/.local/bin:$PATH"
+      if command -v mise >/dev/null 2>&1; then
+        eval "$(mise activate bash)"
+      fi
+  become: false
+
+- name: Activate mise in POSIX login shells
+  ansible.builtin.blockinfile:
+    path: "{{ user_home }}/.profile"
+    create: true
+    mode: "0644"
+    marker: "# {mark} ANSIBLE MANAGED BLOCK: mise activation"
+    block: |
+      export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
+  become: false
+
+- name: Trust dev workspace mise configuration
+  ansible.builtin.command:
+    argv: ["{{ user_bin_dir }}/mise", "trust", "{{ env_dir }}/mise.toml"]
+  when: not ansible_check_mode and _commands_mise.stat.exists
+  changed_when: false
+  become: false
+
+- name: Plan global mise tool installation
+  ansible.builtin.command:
+    argv: ["{{ mise_bin }}", "install", "--dry-run-code"]
+    chdir: "{{ user_home }}"
+  register: _commands_mise_plan
+  changed_when: false
+  failed_when: _commands_mise_plan.rc not in [0, 1]
+  when: not ansible_check_mode and _commands_mise.stat.exists
+  become: false
+
+- name: Install global mise tools
+  ansible.builtin.command:
+    argv: ["{{ mise_bin }}", "install"]
+    chdir: "{{ user_home }}"
+  when: not ansible_check_mode and _commands_mise.stat.exists and _commands_mise_plan.rc | default(0) == 1
+  changed_when: true
+  become: false
+
+- name: Plan terminal CLI installation
+  ansible.builtin.command:
+    argv: ["{{ user_bin_dir }}/mise", "install", "--dry-run-code"]
+    chdir: "{{ user_home }}"
+  register: _commands_term_plan
+  changed_when: false
+  failed_when: _commands_term_plan.rc not in [0, 1]
+  when: not ansible_check_mode and _commands_mise.stat.exists
+  become: false
+
+- name: Install terminal CLIs with mise
+  ansible.builtin.command:
+    argv: ["{{ user_bin_dir }}/mise", "install"]
+    chdir: "{{ user_home }}"
+  when: not ansible_check_mode and _commands_mise.stat.exists and _commands_term_plan.rc | default(0) == 1
+  changed_when: true
+  become: false
+  environment:
+    PATH: "{{ user_path }}"
+
+- name: Install Flatpak apps
+  community.general.flatpak:
+    name: "{{ client_apps | map('extract', apps_catalog) | map(attribute='id') | list }}"
+    state: present
+    method: user
+  when: client_apps | length > 0
+  become: false
+
+- name: Check if Zed is installed
+  ansible.builtin.command:
+    argv: [sh, -c, "command -v zed"]
+  register: _commands_zed
+  changed_when: false
+  failed_when: _commands_zed.rc not in [0, 1, 127]
+  check_mode: false
+  become: false
+  environment:
+    PATH: "{{ user_path }}"
+
+- name: Install Zed at the pinned release
+  ansible.builtin.shell: "set -o pipefail; curl -fsSL {{ zed_install_url }} | sh"
+  args:
+    executable: /bin/bash
+  environment:
+    PATH: "{{ user_path }}"
+    ZED_VERSION: "{{ zed_install_version }}"
+  when: _commands_zed.rc != 0
+  changed_when: true
+  become: false
+
+- name: Require a theme mapping for the host theme
+  ansible.builtin.assert:
+    that: theme_name in zed_themes
+    fail_msg: >-
+      '{{ theme_name }}' has no entry in zed_themes (inventory/group_vars/editors.yml).
+
+- name: Validate host extension selection
+  ansible.builtin.assert:
+    that: zed_extensions | difference(zed_extension_catalog.keys() | list) | length == 0
+    fail_msg: "Unknown zed extension ids: {{ zed_extensions | difference(zed_extension_catalog.keys() | list) }}"
+
+- name: Validate theme asset support for the host accent
+  ansible.builtin.assert:
+    that: theme_accent in (zed_themes[theme_name].asset.checksums | default({}))
+    fail_msg: >-
+      No pinned checksum for accent '{{ theme_accent }}' under
+      zed_themes.{{ theme_name }}.asset.checksums; pin the release JSON.
+  when: zed_themes[theme_name].asset is defined
+
+- name: Resolve selected extension set for the theme
+  ansible.builtin.set_fact:
+    _commands_zed_ext: "{{ (zed_themes[theme_name].extensions | default([])) | union(zed_extensions) }}"
+    _commands_zed_asset: "{{ zed_themes[theme_name].asset | default(none) }}"
+  become: false
+
+- name: Resolve final Zed theme and icon names
+  ansible.builtin.set_fact:
+    _commands_zed_theme:
+      mode: "{{ zed_themes[theme_name].modes[theme_flavour] }}"
+      name: "{{ _commands_theme_names[theme_flavour] ~ _commands_theme_suffix }}"
+      light: "{{ _commands_theme_names[_commands_light_flavour] ~ _commands_theme_suffix }}"
+      icons: "{{ zed_themes[theme_name].icon_names | default(none) }}"
+  vars:
+    _commands_theme_names: "{{ zed_themes[theme_name].asset.flavour_names | default(zed_themes[theme_name].names) }}"
+    _commands_light_flavour: >-
+      {{ zed_themes[theme_name].modes | dict2items
+         | selectattr('value', 'equalto', 'light') | map(attribute='key') | first }}
+    _commands_theme_suffix: >-
+      {{ '' if (zed_themes[theme_name].asset | default({})).default_accent | default(theme_accent) == theme_accent
+         else ' (' ~ theme_accent ~ ')' }}
+
+- name: Ensure Zed extension directories exist
+  ansible.builtin.file:
+    path: "{{ user_home }}/.local/share/zed/extensions/installed/{{ item }}"
+    state: directory
+    mode: "0755"
+  loop: "{{ _commands_zed_ext }}"
+  become: false
+
+- name: Fetch selected extension archives
+  ansible.builtin.get_url:
+    url: "{{ zed_extension_catalog[item].url }}"
+    dest: "{{ user_cache_dir }}/zed-extensions/{{ zed_extension_catalog[item].dir }}.tar.gz"
+    checksum: "{{ zed_extension_catalog[item].checksum }}"
+    mode: "0600"
+  loop: "{{ _commands_zed_ext }}"
+  when: not ansible_check_mode
+  become: false
+
+- name: Install selected Zed extensions
+  ansible.builtin.unarchive:
+    src: "{{ user_cache_dir }}/zed-extensions/{{ zed_extension_catalog[item].dir }}.tar.gz"
+    dest: "{{ user_home }}/.local/share/zed/extensions/installed/{{ item }}"
+    remote_src: true
+    extra_opts: [--strip-components=1]
+    creates: "{{ user_home }}/.local/share/zed/extensions/installed/{{ item }}/extension.toml"
+  loop: "{{ _commands_zed_ext }}"
+  when: not ansible_check_mode
+  become: false
+
+- name: Remove unselected Zed extensions
+  ansible.builtin.file:
+    path: "{{ user_home }}/.local/share/zed/extensions/installed/{{ item }}"
+    state: absent
+  loop: "{{ (zed_extension_catalog.keys() | list | difference(_commands_zed_ext | default([]))) + ['catppuccin'] }}"
+  when: item not in (_commands_zed_ext | default([]))
+  become: false
+
+- name: Install the accented host theme JSON
+  ansible.builtin.get_url:
+    url: "{{ _commands_zed_asset.url | replace('{accent}', theme_accent) }}"
+    checksum: "{{ _commands_zed_asset.checksums[theme_accent] }}"
+    dest: "{{ user_config_dir }}/zed/themes/catppuccin-{{ theme_accent }}.json"
+    mode: "0644"
+  when: _commands_zed_asset is not none and not ansible_check_mode
+  become: false
+
+- name: Check installed AI tools
+  ansible.builtin.stat:
+    path: "{{ item.value.bin }}"
+  loop: "{{ ai_tools_catalog | dict2items }}"
+  register: _commands_ai
+  when: ai_tools_selected | length > 0
+  become: false
+
+- name: Download AI tool installers
+  ansible.builtin.get_url:
+    url: "{{ item.item.value.url }}"
+    dest: "{{ user_cache_dir }}/{{ item.item.key }}-install.sh"
+    mode: "0700"
+  loop: "{{ _commands_ai.results | default([]) }}"
+  when: item.item.key in ai_tools_selected and not item.stat.exists
+  become: false
+
+- name: Install AI tools
+  ansible.builtin.command:
+    argv: ["{{ item.item.value.shell }}", "{{ user_cache_dir }}/{{ item.item.key }}-install.sh"]
+    creates: "{{ item.item.value.bin }}"
+  loop: "{{ _commands_ai.results | default([]) }}"
+  when: item.item.key in ai_tools_selected and not item.stat.exists
+  changed_when: true
+  become: false
+  environment:
+    PATH: "{{ ai_tools_path }}"
+
+- name: Check Command Code CLI installation
+  ansible.builtin.command:
+    argv: [sh, -c, "command -v command-code"]
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  register: _commands_cc_cli
+  when: "'command_code_cli' in ai_tools_extra"
+  become: false
+  environment:
+    PATH: "{{ user_home }}/.local/share/mise/shims:{{ user_path }}"
+
+- name: Install Command Code CLI
+  ansible.builtin.command:
+    argv: ["{{ user_home }}/.local/share/mise/shims/npm", install, -g, command-code]
+  when: "'command_code_cli' in ai_tools_extra and _commands_cc_cli.rc | default(1) != 0"
+  changed_when: true
+  become: false
+
+- name: Check Command Code Desktop release channel
+  ansible.builtin.uri:
+    url: https://api.github.com/repos/CommandCodeAI/desktop/releases/latest
+    return_content: true
+  register: _commands_cc_rel
+  when: "'command_code_desktop' in ai_tools_extra"
+
+- name: Resolve Command Code Desktop AppImage URL and version
+  ansible.builtin.set_fact:
+    _commands_cc_appimage: >-
+      {{ _commands_cc_rel.json.assets
+         | selectattr('name', 'match', 'CommandCode-[0-9.]+-x86_64.AppImage')
+         | map(attribute='browser_download_url') | first }}
+    _commands_cc_tag: "{{ _commands_cc_rel.json.tag_name }}"
+  when:
+    - "'command_code_desktop' in ai_tools_extra"
+    - _commands_cc_rel.json is defined
+
+- name: Check installed Command Code Desktop version stamp
+  ansible.builtin.slurp:
+    src: "{{ user_cache_dir }}/command-code-desktop.version"
+  register: _commands_cc_stamp
+  failed_when: false
+  check_mode: false
+  when: "'command_code_desktop' in ai_tools_extra"
+
+- name: Install Command Code Desktop
+  when: >-
+    'command_code_desktop' in ai_tools_extra
+    and _commands_cc_tag is defined
+    and (_commands_cc_stamp.content | b64decode | default('') | trim != _commands_cc_tag)
+  block:
+    - name: Download Command Code Desktop AppImage
+      ansible.builtin.get_url:
+        url: "{{ _commands_cc_appimage }}"
+        dest: "{{ user_cache_dir }}/command-code-desktop.AppImage"
+        mode: "0755"
+
+    - name: Place Command Code Desktop on the managed PATH
+      ansible.builtin.copy:
+        src: "{{ user_cache_dir }}/command-code-desktop.AppImage"
+        dest: "{{ user_bin_dir }}/command-code-desktop"
+        mode: "0755"
+
+    - name: Record installed Command Code Desktop version
+      ansible.builtin.copy:
+        content: "{{ _commands_cc_rel.json.tag_name }}\n"
+        dest: "{{ user_cache_dir }}/command-code-desktop.version"
+        mode: "0644"
+
+- name: Check Tailscale installation
+  ansible.builtin.command:
+    argv: [sh, -c, "command -v tailscale"]
+  register: _commands_ts
+  changed_when: false
+  failed_when: _commands_ts.rc not in [0, 1, 127]
+  check_mode: false
+  environment:
+    PATH: "{{ user_path }}"
+
+- name: Install Tailscale
+  ansible.builtin.shell: "set -o pipefail; curl -fsSL {{ tailscale_install_url }} | sh"
+  args:
+    executable: /bin/bash
+  become: true
+  when: _commands_ts.rc != 0
+  changed_when: true
+
+- name: Check if firewalld is running
+  ansible.builtin.command:
+    argv: [systemctl, is-active, --quiet, firewalld]
+  register: _commands_fw
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Trust Tailscale interface through firewalld
+  ansible.posix.firewalld:
+    zone: trusted
+    interface: tailscale0
+    state: enabled
+    permanent: true
+    immediate: true
+  become: true
+  when: _commands_fw.rc == 0
+
+- name: Load theme palette for validation
+  ansible.builtin.include_vars:
+    file: "{{ assets_dir }}/themes/{{ theme_name }}/accents.yml"
+
+- name: Resolve theme file
+  ansible.builtin.set_fact:
+    _commands_ron: "{{ [assets_dir, 'themes', theme_name, 'cosmic', _commands_ron_file] | join('/') }}"
+  vars:
+    _commands_ron_file: "{{ theme_ron_template.format(flavour=theme_flavour, accent=theme_accent) }}"
+
+- name: Check for COSMIC Settings
+  ansible.builtin.stat:
+    path: /usr/bin/cosmic-settings
+  register: _commands_cosmic_bin
+
+- name: Fail when COSMIC Settings is unavailable
+  ansible.builtin.assert:
+    that: ansible_check_mode or _commands_cosmic_bin.stat.exists
+    fail_msg: "cosmic-settings is required to apply the COSMIC desktop theme"
+
+- name: Read last imported theme checksum
+  ansible.builtin.slurp:
+    src: "{{ user_cache_dir }}/cosmic-theme-import.sha256"
+  register: _commands_cosmic_last
+  failed_when: false
+  check_mode: false
+
+- name: Compute theme file checksum
+  ansible.builtin.set_fact:
+    _commands_cosmic_sum: "{{ lookup('ansible.builtin.file', _commands_ron) | hash('sha256') }}"
+
+- name: Apply COSMIC theme
+  ansible.builtin.command:
+    argv: [cosmic-settings, appearance, import, "{{ _commands_ron }}"]
+  when: >-
+    not ansible_check_mode
+    and (_commands_cosmic_last.content | b64decode | default('') | trim != _commands_cosmic_sum)
+  changed_when: true
+
+- name: Record imported theme checksum
+  ansible.builtin.copy:
+    content: "{{ _commands_cosmic_sum }}\n"
+    dest: "{{ user_cache_dir }}/cosmic-theme-import.sha256"
+    mode: "0644"
+  when: not ansible_check_mode
+
+- name: Ensure user backgrounds directory exists
+  ansible.builtin.file:
+    path: "{{ user_home }}/.local/share/backgrounds"
+    state: directory
+    mode: "0755"
+  when: theme_wallpaper | length > 0
+
+- name: Copy wallpaper asset to user backgrounds directory
+  ansible.builtin.copy:
+    src: "{{ assets_dir }}/wallpapers/{{ theme_wallpaper }}"
+    dest: "{{ user_home }}/.local/share/backgrounds/{{ theme_wallpaper | basename }}"
+    mode: "0644"
+  when: theme_wallpaper | length > 0
+
+- name: Deploy wallpaper RON config
+  ansible.builtin.copy:
+    content: |
+      (
+          filter_by_theme: false,
+          filter_method: Lanczos,
+          output: "all",
+          rotation_frequency: 0,
+          sampling_method: Alphanumeric,
+          scaling_mode: Zoom,
+          source: Path("{{ user_home }}/.local/share/backgrounds/{{ theme_wallpaper | basename }}"),
+      )
+    dest: "{{ user_config_dir }}/cosmic/com.system76.CosmicBackground/v1/all"
+    mode: "0644"
+  when: theme_wallpaper | length > 0
+
+- name: Deploy COSMIC panel and dock configuration
+  ansible.builtin.copy:
+    src: "{{ assets_dir }}/cosmic-shell/{{ inventory_hostname }}/"
+    dest: "{{ user_config_dir }}/cosmic/"
+    mode: preserve
+  become: false
+
+- name: Create mise directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - "{{ user_bin_dir }}"
+    - "{{ user_cache_dir }}"
+    - "{{ mise_config_dir }}"
+    - "{{ user_config_dir }}/mise/conf.d"
+    - "{{ env_dir }}"
+
+- name: Deploy global mise configuration
+  ansible.builtin.template:
+    src: mise-global.toml.j2
+    dest: "{{ mise_config_dir }}/config.toml"
+    mode: "0644"
+  no_log: true
+
+- name: Deploy the dev-CLI mise configuration
+  ansible.builtin.template:
+    src: mise-terminal.toml.j2
+    dest: "{{ user_config_dir }}/mise/conf.d/terminal-tools.toml"
+    mode: "0644"
+
+- name: Deploy dev workspace mise configuration
+  ansible.builtin.template:
+    src: mise-workspace.toml.j2
+    dest: "{{ env_dir }}/mise.toml"
+    mode: "0644"
+  no_log: true
+
+- name: Deploy Zed settings from host configuration
+  ansible.builtin.template:
+    src: zed-settings.json.j2
+    dest: "{{ user_config_dir }}/zed/settings.json"
+    mode: "0644"
+  no_log: true
+  become: false

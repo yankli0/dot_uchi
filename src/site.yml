@@ -1,0 +1,91 @@
+---
+# Single entry point for all hosts. Host identity comes from inventory;
+# per-host config lives in host_vars/<host>/vars.yml.
+# Selective runs: ansible-playbook site.yml --tags shell
+- name: Configure managed host
+  hosts: all
+  pre_tasks:
+    - name: Validate required host configuration
+      ansible.builtin.assert:
+        that: varname is defined and varname is not none and varname | length > 0
+        fail_msg: "Required host var '{{ varname }}' is missing/empty for {{ inventory_hostname }}."
+        quiet: true
+      loop: [hostname, theme_name, theme_flavour, theme_accent]
+      loop_control:
+        loop_var: varname
+      tags: always
+
+  tasks:
+    - name: Configure system base
+      become: true
+      tags: [system, base]
+      block:
+        - name: Set hostname
+          ansible.builtin.hostname:
+            name: "{{ hostname }}"
+          when: hostname is defined
+
+        - name: Install section packages
+          ansible.builtin.import_role:
+            name: packages
+
+        - name: Configure Git identity
+          ansible.builtin.import_role:
+            name: git
+          tags: [git]
+
+        - name: Set Zsh as login shell
+          ansible.builtin.user:
+            name: "{{ ansible_user }}"
+            shell: /usr/bin/zsh
+          tags: [shell]
+
+    - name: Configure user environment and workspace
+      become: false
+      tags: [user]
+      block:
+        - name: Point the session at the SSH agent
+          ansible.builtin.import_role:
+            name: ssh_agent
+          tags: [ssh]
+
+        - name: Fetch pinned artifacts
+          ansible.builtin.import_role:
+            name: fetch
+          tags: [fetch]
+
+        - name: Run imperative setup commands
+          ansible.builtin.import_role:
+            name: commands
+          tags: [tools]
+
+        - name: Enable user services
+          ansible.builtin.import_role:
+            name: services
+          tags: [services]
+
+        - name: Check chezmoi installation
+          ansible.builtin.stat:
+            path: "{{ user_bin_dir }}/chezmoi"
+          register: _chezmoi_bin
+          tags: [dotfiles]
+
+        - name: Install chezmoi via mise
+          ansible.builtin.command:
+            argv: [mise, install, chezmoi]
+          when: not _chezmoi_bin.stat.exists
+          changed_when: true
+          environment:
+            PATH: "{{ user_bin_dir }}:{{ ansible_facts['env']['PATH'] }}"
+          tags: [dotfiles]
+
+        - name: Apply chezmoi dotfiles
+          ansible.builtin.command:
+            argv: ["{{ user_bin_dir }}/chezmoi", apply, --force, --source, "{{ chezmoi_source_dir }}"]
+          register: _chezmoi_apply
+          changed_when: true
+          failed_when: _chezmoi_apply.rc != 0
+          when: not ansible_check_mode
+          environment:
+            HOME: "{{ user_home }}"
+          tags: [dotfiles]

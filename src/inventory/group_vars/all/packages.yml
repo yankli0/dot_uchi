@@ -1,0 +1,36 @@
+---
+# Package sets per area — one list each, concatenated by generic/packages.
+# Empty list = install nothing.
+packages_system:
+  - git
+  - curl
+  - wget
+  - ca-certificates
+  - python3
+  - unzip
+  - libatomic
+packages_shell:
+  - zsh
+  - zsh-autosuggestions
+  - zsh-syntax-highlighting
+packages_env:
+  - fzf
+  - ripgrep
+  - bat
+  - btop
+  - htop
+  - eza
+  - zoxide
+  - fastfetch
+packages_apps:
+  - flatpak
+packages_services:
+  - syncthing
+  - podman
+  - podman-compose
+  - toolbox
+
+# User-scope systemd units enabled by generic/services.
+services_user:
+  - syncthing.service
+  - podman.socket
