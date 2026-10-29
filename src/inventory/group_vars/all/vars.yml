@@ -9,7 +9,7 @@ ansible_python_interpreter: /usr/bin/python3
 # ── Derived paths — define once, every role uses these ───────────────────────
 user_home: "{{ ansible_facts['env']['HOME'] }}"
 user_bin_dir: "{{ user_home }}/.local/bin"
-user_cache_dir: "{{ user_home }}/.cache/dot-uchi"
+user_cache_dir: "{{ user_home }}/.cache/dotfiles"
 user_config_dir: "{{ user_home }}/.config"
 user_xdg_runtime: "/run/user/{{ ansible_facts['user_uid'] }}"
 user_path: "{{ user_bin_dir }}:{{ ansible_facts['env']['PATH'] }}"
@@ -19,7 +19,7 @@ user_path: "{{ user_bin_dir }}:{{ ansible_facts['env']['PATH'] }}"
 assets_dir: "{{ playbook_dir | dirname }}/assets"
 
 # ── Git identity — consumed by the git role ───────────────────────────────────
-# Override per host in inventory/host_vars/<host>.yml when needed.
+# Override per host in inventory/host_vars/<host>/vars.yml when needed.
 git_user_name: "yanklio"
 git_user_email: "y.ustinov2004@gmail.com"
 git_default_branch: main
