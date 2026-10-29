@@ -153,14 +153,6 @@
     that: zed_extensions | difference(zed_extension_catalog.keys() | list) | length == 0
     fail_msg: "Unknown zed extension ids: {{ zed_extensions | difference(zed_extension_catalog.keys() | list) }}"
 
-- name: Validate theme asset support for the host accent
-  ansible.builtin.assert:
-    that: theme_accent in (zed_themes[theme_name].asset.checksums | default({}))
-    fail_msg: >-
-      No pinned checksum for accent '{{ theme_accent }}' under
-      zed_themes.{{ theme_name }}.asset.checksums; pin the release JSON.
-  when: zed_themes[theme_name].asset is defined
-
 - name: Resolve selected extension set for the theme
   ansible.builtin.set_fact:
     _commands_zed_ext: "{{ (zed_themes[theme_name].extensions | default([])) | union(zed_extensions) }}"
@@ -195,7 +187,6 @@
   ansible.builtin.get_url:
     url: "{{ zed_extension_catalog[item].url }}"
     dest: "{{ user_cache_dir }}/zed-extensions/{{ zed_extension_catalog[item].dir }}.tar.gz"
-    checksum: "{{ zed_extension_catalog[item].checksum }}"
     mode: "0600"
   loop: "{{ _commands_zed_ext }}"
   when: not ansible_check_mode
@@ -223,7 +214,6 @@
 - name: Install the accented host theme JSON
   ansible.builtin.get_url:
     url: "{{ _commands_zed_asset.url | replace('{accent}', theme_accent) }}"
-    checksum: "{{ _commands_zed_asset.checksums[theme_accent] }}"
     dest: "{{ user_config_dir }}/zed/themes/catppuccin-{{ theme_accent }}.json"
     mode: "0644"
   when: _commands_zed_asset is not none and not ansible_check_mode

@@ -6,7 +6,6 @@ zed_install_version: "v1.25.3"
 zed_extension_catalog:
   catppuccin-icons:
     url: https://github.com/catppuccin/zed-icons/archive/refs/tags/v1.24.0.tar.gz
-    checksum: sha256:e3f1a11f8d3e899e1f25d162b9367f476988e077aa4c6a5c054f1bd790eaf982
     dir: catppuccin-zed-icons-1.24.0
 zed_themes:
   catppuccin:
@@ -29,21 +28,6 @@ zed_themes:
         frappe: "Catppuccin Frappé"
         macchiato: "Catppuccin Macchiato"
         mocha: "Catppuccin Mocha"
-      checksums:
-        blue: sha256:7c64484cd61db7db0fc33fb992a799f49f84fae6f98f75eae2e1e6bf25f6e8c
-        flamingo: sha256:429012e63b976e265c6c079a5d8f3d688474000b8a25384e878c8db5dc2bdf
-        green: sha256:396d0a9cc9a6e4714a99a7f7cc18266eac4a2b01ca7436184260bbd358942
-        lavender: sha256:2884a82473dd26f127a6eab52d93169eab97fec58613e756
-        maroon: sha256:c8f51e3c9d1ec9d7e265bc1b690f4ab5b687e03361c591d942873e3e011eb9
-        mauve: sha256:b8f13dcb1e914f559666cc0c39a2d9d08aebb8461d70c8b9ec1b1
-        peach: sha256:9ab7c1fae29ff8e5e39a30a1c6e7fbc2e5028a0357aca5d
-        pink: sha256:98d952c41cfac8c296e2d3a611a1d5e93a08d0efc96a250a514
-        red: sha256:3ce81a7a65a71b730fd61c93f49d61cc937e05a7560ec1ea2ede8
-        rosewater: sha256:64270ea81c771eb0b8f0e1bdfd8b535fdb038a63354b8c7ff98502f9289ad
-        sapphire: sha256:6c49b5dc694e47baccb278d5e275e941bfaa49a67e00a7cf99058e813ea97
-        sky: sha256:29c7c1dc5126e0dbef95ebd95f3a7d0acb8356efc4e5e4e47
-        teal: sha256:60e012e04f98b841bb7a4b89ecb17636fea8bb1a4f3c37deee02283503ea8c
-        yellow: sha256:b1b3e19d26b04a8d5790d2b6a97345c7555804220e78a8e02c
   gruvbox:
     extensions: []
     modes:

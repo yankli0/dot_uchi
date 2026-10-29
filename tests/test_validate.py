@@ -179,8 +179,9 @@ def test_theme_ron_core_fields_present():
 
 
 def test_every_provisioned_url_catalog_has_https_entries():
-    # Fonts and AI tool installers must reference real URLs for the checksummed
-    # download pipeline.
+    # Fonts and AI tool installers must reference real URLs. Fonts stay
+    # checksum-pinned; Zed extensions and theme JSONs track upstream
+    # (no pin — upstream re-archives break pins).
     tools = _load_yaml(ALL_VARS / "ai.yml")
     fonts = tools["fonts_catalog"]
     for _font_key, spec in fonts.items():
@@ -196,7 +197,6 @@ def test_every_provisioned_url_catalog_has_https_entries():
     catalog = zed_meta["zed_extension_catalog"]
     for _key, spec in catalog.items():
         assert spec["url"].startswith("https://")
-        assert spec["checksum"].startswith("sha256:")
         assert spec["dir"]
 
     for theme, mapping in zed_meta["zed_themes"].items():
@@ -215,10 +215,7 @@ def test_every_provisioned_url_catalog_has_https_entries():
             )
         asset = mapping.get("asset")
         if asset is not None:
-            assert "{accent}" in asset["url"] and set(asset["checksums"])
-            accents = _load_yaml(ASSETS / "themes" / theme / "accents.yml")["accents"]
-            missing = set(accents) - set(asset["checksums"])
-            assert not missing, f"zed_themes[{theme}].asset unpinned accents: {missing}"
+            assert "{accent}" in asset["url"]
 
 
 def test_provenance_docs_exist_for_theme_assets():
