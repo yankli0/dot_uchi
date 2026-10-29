@@ -1,5 +1,0 @@
-# Ansible-managed global mise tools
-[tools]
-{% for name, spec in mise_global_tools.items() %}
-"{{ spec.tool }}" = "{{ spec.version }}"
-{% endfor %}

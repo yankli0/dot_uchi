@@ -1,8 +1,0 @@
----
-mise_bin: "{{ user_bin_dir }}/mise"
-mise_config_dir: "{{ user_config_dir }}/mise"
-# Tools available in every shell, not just inside the dev workspace.
-# Per-host narrowing happens via host vars, e.g.:
-#   mise_global_tools: {node: {tool: node, version: latest}}
-mise_global_tools:
-  node: {tool: node, version: latest}

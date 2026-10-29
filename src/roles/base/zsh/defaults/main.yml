@@ -1,5 +1,0 @@
----
-zsh_packages:
-  - zsh
-  - zsh-autosuggestions
-  - zsh-syntax-highlighting

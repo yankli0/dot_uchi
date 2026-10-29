@@ -1,5 +1,0 @@
-# Dev CLIs tracked upstream by mise (installed lazily alongside global tools).
-[tools]
-{% for _tool, _spec in terminal_tools_mise | dictsort %}
-{{ _spec.tool }} = "{{ _spec.version }}"
-{% endfor %}
