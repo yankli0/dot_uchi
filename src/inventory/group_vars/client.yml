@@ -1,6 +1,6 @@
 ---
 # Client group variables — shared defaults for brisingamen and gleipnir.
-# Overrides go in inventory/host_vars/<host>.yml.
+# Overrides go in inventory/host_vars/<host>/vars.yml.
 
 # Application selection for the apps role. Keys of apps_catalog
 # (roles/client/apps/vars/main.yml). Empty list = install nothing.
